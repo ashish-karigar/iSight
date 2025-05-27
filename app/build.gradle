@@ -42,6 +42,10 @@ android {
         abortOnError false
         disable 'GradleCompatible'
     }
+
+    viewBinding {
+        enabled = true
+    }
 }
 
 dependencies {
