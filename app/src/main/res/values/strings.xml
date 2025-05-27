@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">UVC Camera Preview</string>
+    <string name="status_no_device">No UVC device connected</string>
+    <string name="status_device_connected">UVC device connected</string>
+    <string name="status_device_error">Error connecting to device</string>
+    <string name="permission_required">USB permission required</string>
+</resources>

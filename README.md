@@ -1,0 +1,51 @@
+# UVC Camera Preview for Android
+
+This project demonstrates how to connect and preview a USB Video Class (UVC) camera on Android devices.
+
+## Features
+
+- Automatic detection of USB camera devices
+- Requesting USB permissions automatically
+- Real-time preview of camera feed
+- Status indicators for device connection
+
+## Requirements
+
+- Android device with USB host support (Android 5.0+)
+- UVC compatible camera
+- Android Studio 4.2+
+
+## Setup
+
+1. Clone this repository
+2. Open the project in Android Studio
+3. Connect your UVC camera to your Android device using a USB OTG adapter if needed
+4. Build and run the application on your device
+
+## How it works
+
+The app uses the [UVCCamera library](https://github.com/saki4510t/UVCCamera) by saki4510t to handle communication with UVC devices. It implements the following flow:
+
+1. Monitors USB device connections
+2. Requests permission to access the UVC device when connected
+3. Opens a connection to the camera
+4. Displays the camera feed on a texture view
+5. Properly handles device disconnection
+
+## Permissions
+
+The application requires the USB Host feature and automatically requests permission to access UVC devices when they are connected.
+
+## Known limitations
+
+- Some UVC cameras may not be compatible or may require specific settings
+- Performance may vary based on the device and camera specifications
+- The default resolution is set to 640x480
+
+## Acknowledgements
+
+This project is based on the [UVCCamera library](https://github.com/saki4510t/UVCCamera) by saki4510t.
+
+## License
+
+MIT License 
