@@ -39,8 +39,8 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
     private static final int REQUEST_PERMISSIONS = 1001;
     
     // The default width and height for preview
-    private static final int DEFAULT_WIDTH = 640;
-    private static final int DEFAULT_HEIGHT = 480;
+    private static final int DEFAULT_WIDTH = 320; //640;
+    private static final int DEFAULT_HEIGHT = 240; //480;
     
     // UI references
     private FrameLayout mCameraViewContainer;
@@ -142,6 +142,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
         mCameraClient = new MultiCameraClient(this, new IDeviceConnectCallBack() {
             @Override
             public void onAttachDev(UsbDevice device) {
+                Log.d(TAG, "onAttachDev: USB device attached: " + device);
                 if (DEBUG) Log.d(TAG, "USB device attached: " + device.getDeviceName());
                 // Request permission when device is attached
                 mCameraClient.requestPermission(device);

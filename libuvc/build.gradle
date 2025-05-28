@@ -41,11 +41,11 @@ android {
 		disable 'MissingTranslation'
 	}
 
-	externalNativeBuild {
-		ndkBuild {
-			path 'src/main/jni/Android.mk'
-		}
-	}
+//	externalNativeBuild {
+//		ndkBuild {
+//			path 'src/main/jni/Android.mk'
+//		}
+//	}
 
 	buildTypes {
 		release {
