@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
     private FrameLayout mCameraViewContainer;
     private AspectRatioTextureView mCameraView;
     private TextView mStatusTextView;
-    private FloatingActionButton mCaptureButton;
+//    private FloatingActionButton mCaptureButton;
     private FloatingActionButton mRecordButton;
 
     // Camera
@@ -140,15 +140,15 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
 
         mCameraViewContainer = findViewById(R.id.camera_preview);
         mStatusTextView = findViewById(R.id.status_text);
-        mCaptureButton = findViewById(R.id.capture_button);
+//        mCaptureButton = findViewById(R.id.capture_button);
         mRecordButton = findViewById(R.id.record_button);
 
         mCameraView = new AspectRatioTextureView(this);
         mCameraViewContainer.addView(mCameraView);
 
-        mCaptureButton.setOnClickListener(v -> {
-            if (mCamera != null && !mIsCapturing) capturePhoto();
-        });
+//        mCaptureButton.setOnClickListener(v -> {
+//            if (mCamera != null && !mIsCapturing) capturePhoto();
+//        });
         mRecordButton.setOnClickListener(v -> {
             if (mIsRecording) stopVideoCapture();
             else startVideoCapture();
@@ -275,7 +275,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
                     Log.w(TAG, "onDetachDec: device is null");
                 }
                 runOnUiThread(() -> {
-                    mCaptureButton.setEnabled(false);
+//                    mCaptureButton.setEnabled(false);
                     mRecordButton.setEnabled(false);
                     mStatusTextView.setText(R.string.status_no_device);
                 });
@@ -311,7 +311,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
                 }
                 closeCamera();
                 runOnUiThread(() -> {
-                    mCaptureButton.setEnabled(false);
+//                    mCaptureButton.setEnabled(false);
                     mRecordButton.setEnabled(false);
                     mStatusTextView.setText(R.string.status_no_device);
                 });
@@ -509,7 +509,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
             return;
         }
         mIsCapturing = true;
-        mCaptureButton.setEnabled(false);
+//        mCaptureButton.setEnabled(false);
         Log.d(TAG, "Attempting to capture photo.");
 
         new Thread(() -> {
@@ -520,7 +520,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
                     Log.e(TAG, "Failed to create photo file object.");
                     runOnUiThread(() -> {
                         Toast.makeText(MainActivity.this, "Error creating photo file.", Toast.LENGTH_SHORT).show();
-                        mCaptureButton.setEnabled(true);
+//                        mCaptureButton.setEnabled(true);
                         mIsCapturing = false;
                     });
                     return;
@@ -537,7 +537,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
                         runOnUiThread(() -> {
                             Toast.makeText(MainActivity.this,
                                     "Capture error: " + error, Toast.LENGTH_SHORT).show();
-                            mCaptureButton.setEnabled(true);
+//                            mCaptureButton.setEnabled(true);
                             mIsCapturing = false;
                         });
                     }
@@ -558,7 +558,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
                         runOnUiThread(() -> {
                             Toast.makeText(MainActivity.this,
                                     "Photo saved: " + (path !=null ? new File(path).getName() : "Error"), Toast.LENGTH_LONG).show();
-                            mCaptureButton.setEnabled(true);
+//                            mCaptureButton.setEnabled(true);
                             mIsCapturing = false;
                         });
                     }
@@ -566,7 +566,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
             } catch (Exception e) {
                 Log.e(TAG, "Exception in capturePhoto thread", e);
                 runOnUiThread(() -> {
-                    mCaptureButton.setEnabled(true);
+//                    mCaptureButton.setEnabled(true);
                     mIsCapturing = false;
                 });
             }
@@ -580,13 +580,13 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
             switch (code) {
                 case OPENED:
                     mStatusTextView.setText(R.string.status_device_connected);
-                    mCaptureButton.setEnabled(true);
+//                    mCaptureButton.setEnabled(true);
                     mRecordButton.setEnabled(true);
                     break;
                 case CLOSED:
                 case ERROR:
                     mStatusTextView.setText(R.string.status_no_device);
-                    mCaptureButton.setEnabled(false);
+//                    mCaptureButton.setEnabled(false);
                     mRecordButton.setEnabled(false);
                     break;
             }

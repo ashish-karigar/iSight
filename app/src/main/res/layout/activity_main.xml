@@ -18,7 +18,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_toStartOf="@id/capture_button"
+        android:layout_centerHorizontal="true"
         android:layout_marginBottom="80dp"
         android:layout_marginEnd="16dp"
         app:srcCompat="@android:drawable/ic_media_play"
@@ -26,16 +26,16 @@
         app:tint="#000000"/>
 
     <!-- Capture button -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/capture_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="80dp"
-        android:src="@android:drawable/ic_menu_camera"
-        app:backgroundTint="#80FFFFFF"
-        app:tint="#000000" />
+<!--    <com.google.android.material.floatingactionbutton.FloatingActionButton-->
+<!--        android:id="@+id/capture_button"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_alignParentBottom="true"-->
+<!--        android:layout_centerHorizontal="true"-->
+<!--        android:layout_marginBottom="80dp"-->
+<!--        android:src="@android:drawable/ic_menu_camera"-->
+<!--        app:backgroundTint="#80FFFFFF"-->
+<!--        app:tint="#000000" />-->
 
     <!-- Status text display -->
     <TextView
