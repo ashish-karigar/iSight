@@ -25,17 +25,18 @@
         app:backgroundTint="#80FFFFFF"
         app:tint="#000000"/>
 
-    <!-- Capture button -->
-<!--    <com.google.android.material.floatingactionbutton.FloatingActionButton-->
-<!--        android:id="@+id/capture_button"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_alignParentBottom="true"-->
-<!--        android:layout_centerHorizontal="true"-->
-<!--        android:layout_marginBottom="80dp"-->
-<!--        android:src="@android:drawable/ic_menu_camera"-->
-<!--        app:backgroundTint="#80FFFFFF"-->
-<!--        app:tint="#000000" />-->
+<!--     Capture button -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/capture_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="false"
+        android:layout_marginStart="20dp"
+        android:layout_marginBottom="80dp"
+        android:src="@android:drawable/ic_menu_camera"
+        app:backgroundTint="#80FFFFFF"
+        app:tint="#000000" />
 
     <!-- Status text display -->
     <TextView

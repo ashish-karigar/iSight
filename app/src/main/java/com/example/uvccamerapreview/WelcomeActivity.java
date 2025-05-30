@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
+import android.util.Log;
 import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -19,6 +20,8 @@ public class WelcomeActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityWelcomeBinding.inflate(getLayoutInflater());
+        Log.d("DEBUG", "WelcomeActivity onCreate triggered");
+        Toast.makeText(this, "WelcomeActivity loaded", Toast.LENGTH_SHORT).show();
         setContentView(binding.getRoot());
         prefs = getSharedPreferences("uvc_prefs", MODE_PRIVATE);
 

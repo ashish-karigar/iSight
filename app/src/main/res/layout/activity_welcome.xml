@@ -7,7 +7,7 @@
     android:padding="24dp">
 
     <TextView
-        android:text="Welcome to EndoCam"
+        android:text="Welcome to My Lens"
         android:textSize="24sp"
         android:layout_marginBottom="32dp"
         android:textStyle="bold"

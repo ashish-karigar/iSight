@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">UVC Camera Preview</string>
+    <string name="app_name">My Lens</string>
     <string name="status_no_device">No UVC device connected</string>
     <string name="status_device_connected">UVC device connected</string>
     <string name="status_device_error">Error connecting to device</string>

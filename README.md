@@ -1,4 +1,4 @@
-# UVC Camera Preview for Android
+# My Lens for Android
 
 This project demonstrates how to connect and preview a USB Video Class (UVC) camera on Android devices.
 

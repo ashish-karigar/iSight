@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.hardware.usb.UsbDevice;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -50,7 +51,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
     private FrameLayout mCameraViewContainer;
     private AspectRatioTextureView mCameraView;
     private TextView mStatusTextView;
-//    private FloatingActionButton mCaptureButton;
+    private FloatingActionButton mCaptureButton;
     private FloatingActionButton mRecordButton;
 
     // Camera
@@ -63,6 +64,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
     private Uri mTreeUri;           // SAF folder URI
     private String mTempSaveDir;    // local temp path
     private String mCurrentVideoPath; // <<<< ADDED: To store current video path
+    private String mCurrentPhotoPath; // To store current photo path
 
     private final ICaptureCallBack videoCb = new ICaptureCallBack() {
         @Override
@@ -136,19 +138,21 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d("DEBUG", "MainActivity onCreate triggered");
+        Toast.makeText(this, "MainActivity loaded", Toast.LENGTH_SHORT).show();
         setContentView(R.layout.activity_main);
 
         mCameraViewContainer = findViewById(R.id.camera_preview);
         mStatusTextView = findViewById(R.id.status_text);
-//        mCaptureButton = findViewById(R.id.capture_button);
+        mCaptureButton = findViewById(R.id.capture_button);
         mRecordButton = findViewById(R.id.record_button);
 
         mCameraView = new AspectRatioTextureView(this);
         mCameraViewContainer.addView(mCameraView);
 
-//        mCaptureButton.setOnClickListener(v -> {
-//            if (mCamera != null && !mIsCapturing) capturePhoto();
-//        });
+        mCaptureButton.setOnClickListener(v -> {
+            if (mCamera != null && !mIsCapturing) capturePhoto();
+        });
         mRecordButton.setOnClickListener(v -> {
             if (mIsRecording) stopVideoCapture();
             else startVideoCapture();
@@ -275,7 +279,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
                     Log.w(TAG, "onDetachDec: device is null");
                 }
                 runOnUiThread(() -> {
-//                    mCaptureButton.setEnabled(false);
+                    mCaptureButton.setEnabled(false);
                     mRecordButton.setEnabled(false);
                     mStatusTextView.setText(R.string.status_no_device);
                 });
@@ -311,7 +315,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
                 }
                 closeCamera();
                 runOnUiThread(() -> {
-//                    mCaptureButton.setEnabled(false);
+                    mCaptureButton.setEnabled(false);
                     mRecordButton.setEnabled(false);
                     mStatusTextView.setText(R.string.status_no_device);
                 });
@@ -490,13 +494,15 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
     private File createPhotoFile() {
         String ts = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
                 .format(new Date());
-        File dir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "UVCCamera");
+//        File dir = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), "UVCCamera");
+        File dir = new File(mTempSaveDir);
         if (!dir.exists()) {
             if(!dir.mkdirs()){
                 Log.e(TAG, "Failed to create directory for photos: " + dir.getAbsolutePath());
                 return null;
             }
         }
+        Log.d(TAG,"hehe this works:" + dir + ts);
         File photoFile = new File(dir, "UVC_IMG_" + ts + ".jpg");
         Log.d(TAG, "Creating photo file at: " + photoFile.getAbsolutePath());
         return photoFile;
@@ -504,73 +510,119 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
 
     private void capturePhoto() {
         if (mCamera == null) {
-            Toast.makeText(this, "Camera not ready for photo.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Camera not available.", Toast.LENGTH_SHORT).show();
             Log.w(TAG, "capturePhoto: mCamera is null.");
             return;
         }
-        mIsCapturing = true;
-//        mCaptureButton.setEnabled(false);
-        Log.d(TAG, "Attempting to capture photo.");
+        if (mTreeUri == null) {
+            Toast.makeText(this, "Please select an output folder first.", Toast.LENGTH_LONG).show();
+            pickFolder();
+            return;
+        }
 
-        new Thread(() -> {
-            try {
-                Thread.sleep(200);
-                File f = createPhotoFile();
-                if (f == null) {
-                    Log.e(TAG, "Failed to create photo file object.");
-                    runOnUiThread(() -> {
-                        Toast.makeText(MainActivity.this, "Error creating photo file.", Toast.LENGTH_SHORT).show();
-//                        mCaptureButton.setEnabled(true);
-                        mIsCapturing = false;
-                    });
+        try {
+            String name = "UVC_IMG_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
+                    .format(new Date()) + ".jpg";
+            mCurrentPhotoPath = mTempSaveDir + File.separator + name;
+            Log.d(TAG, "Starting photo capture. Temp path: " + mCurrentPhotoPath);
+
+            File tempDirFile = new File(mTempSaveDir);
+            if (!tempDirFile.exists()) {
+                if (tempDirFile.mkdirs()) {
+                    Log.d(TAG, "Created temp save directory: " + mTempSaveDir);
+                } else {
+                    Log.e(TAG, "Failed to create temp save directory: " + mTempSaveDir);
+                    Toast.makeText(this, "Error: Cannot create temp directory.", Toast.LENGTH_LONG).show();
+                    mCurrentPhotoPath = null;
                     return;
                 }
-                mCamera.captureImage(new ICaptureCallBack() {
-                    @Override
-                    public void onBegin() {
-                        Log.d(TAG, "captureImage.onBegin");
-                    }
-
-                    @Override
-                    public void onError(String error) {
-                        Log.e(TAG, "captureImage.onError: " + error);
-                        runOnUiThread(() -> {
-                            Toast.makeText(MainActivity.this,
-                                    "Capture error: " + error, Toast.LENGTH_SHORT).show();
-//                            mCaptureButton.setEnabled(true);
-                            mIsCapturing = false;
-                        });
-                    }
-
-                    @Override
-                    public void onComplete(String path) {
-                        Log.d(TAG, "captureImage.onComplete, path: " + path);
-                        if (path != null) {
-                            File imageFile = new File(path);
-                            if (imageFile.exists()) {
-                                Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-                                Uri contentUri = Uri.fromFile(imageFile);
-                                mediaScanIntent.setData(contentUri);
-                                sendBroadcast(mediaScanIntent);
-                                Log.d(TAG, "Image saved: " + path + ", sent media scan broadcast.");
-                            }
-                        }
-                        runOnUiThread(() -> {
-                            Toast.makeText(MainActivity.this,
-                                    "Photo saved: " + (path !=null ? new File(path).getName() : "Error"), Toast.LENGTH_LONG).show();
-//                            mCaptureButton.setEnabled(true);
-                            mIsCapturing = false;
-                        });
-                    }
-                }, f.getAbsolutePath());
-            } catch (Exception e) {
-                Log.e(TAG, "Exception in capturePhoto thread", e);
-                runOnUiThread(() -> {
-//                    mCaptureButton.setEnabled(true);
-                    mIsCapturing = false;
-                });
             }
-        }).start();
+
+            mCamera.captureImage(new ICaptureCallBack() {
+                @Override
+                public void onBegin() {
+                    Log.d(TAG, "captureImage.onBegin");
+                    runOnUiThread(() -> {
+                        mIsCapturing = true;
+                        mCaptureButton.setEnabled(false);
+                        Toast.makeText(MainActivity.this, "Capturing photo...", Toast.LENGTH_SHORT).show();
+                    });
+                }
+
+                @Override
+                public void onError(String error) {
+                    Log.e(TAG, "captureImage.onError: " + error);
+                    boolean wasFileCopied = false;
+                    if (error != null && error.contains("Mutation of _data is not allowed") && mCurrentPhotoPath != null) {
+                        Log.w(TAG, "Mutation error detected. Attempting to salvage photo: " + mCurrentPhotoPath);
+                        File tempFile = new File(mCurrentPhotoPath);
+                        if (tempFile.exists() && tempFile.length() > 0) {
+                            Log.d(TAG, "Temp file for salvage exists and is not empty. Size: " + tempFile.length());
+                            copyToFolder(mCurrentPhotoPath);
+                            wasFileCopied = true;
+                        } else {
+                            Log.e(TAG, "Temp file for salvage is missing or empty. Path: " + mCurrentPhotoPath);
+                        }
+                    }
+
+                    final boolean finalWasFileCopied = wasFileCopied;
+                    runOnUiThread(() -> {
+                        mIsCapturing = false;
+                        mCaptureButton.setEnabled(true);
+                        if (!finalWasFileCopied) {
+                            Toast.makeText(MainActivity.this, "Capture error: " + error, Toast.LENGTH_LONG).show();
+                        }
+                    });
+                    mCurrentPhotoPath = null; // Clear path after handling
+                }
+
+                @Override
+                public void onComplete(String path) {
+                    Log.d(TAG, "captureImage.onComplete, path: " + path);
+                    mCurrentPhotoPath = null; // Clear path as it's successfully completed
+                    if (path == null) {
+                        Log.e(TAG, "captureImage.onComplete: path is null!");
+                        runOnUiThread(() -> {
+                            mIsCapturing = false;
+                            mCaptureButton.setEnabled(true);
+                            Toast.makeText(MainActivity.this, "Capture complete but path is null.", Toast.LENGTH_LONG).show();
+                        });
+                        return;
+                    }
+
+                    File tempFile = new File(path);
+                    if (tempFile.exists() && tempFile.length() > 0) {
+                        Log.d(TAG, "Temporary photo file exists and is not empty. Size: " + tempFile.length() + " bytes. Path: " + path);
+                        MediaScannerConnection.scanFile(
+                                MainActivity.this,
+                                new String[]{tempFile.getAbsolutePath()},
+                                new String[]{"image/jpeg"},
+                                null
+                        );
+                        copyToFolder(path);
+                    } else if (tempFile.exists()) {
+                        Log.w(TAG, "Temporary photo file exists but is EMPTY. Path: " + path);
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Photo file is empty.", Toast.LENGTH_LONG).show());
+                    } else {
+                        Log.e(TAG, "Temporary photo file DOES NOT EXIST at path: " + path);
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Photo file missing.", Toast.LENGTH_LONG).show());
+                    }
+
+                    runOnUiThread(() -> {
+                        mIsCapturing = false;
+                        mCaptureButton.setEnabled(true);
+                        Toast.makeText(MainActivity.this, "Photo saved: " + new File(path).getName(), Toast.LENGTH_LONG).show();
+                    });
+                }
+            }, mCurrentPhotoPath);
+            Log.i(TAG, "Photo capture started.");
+        } catch (Exception e) {
+            Log.e(TAG, "Cannot start photo capture", e);
+            Toast.makeText(this, "Cannot start capture: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            mIsCapturing = false;
+            mCaptureButton.setEnabled(true);
+            mCurrentPhotoPath = null;
+        }
     }
 
     @Override
@@ -580,13 +632,13 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
             switch (code) {
                 case OPENED:
                     mStatusTextView.setText(R.string.status_device_connected);
-//                    mCaptureButton.setEnabled(true);
+                    mCaptureButton.setEnabled(true);
                     mRecordButton.setEnabled(true);
                     break;
                 case CLOSED:
                 case ERROR:
                     mStatusTextView.setText(R.string.status_no_device);
-//                    mCaptureButton.setEnabled(false);
+                    mCaptureButton.setEnabled(false);
                     mRecordButton.setEnabled(false);
                     break;
             }
