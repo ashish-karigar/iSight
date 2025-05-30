@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.SurfaceTexture
+import android.opengl.EGL14 // <<<< --- ADDED IMPORT --- >>>>
 import android.opengl.EGLContext
 import android.os.*
 import android.provider.MediaStore
@@ -42,20 +43,10 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Render manager
- *
- * @property surfaceWidth camera preview width
- * @property surfaceHeight camera preview height
- *
- * @param context context
- *
- * @author Created by jiangdg on 2021/12/28
- */
 class RenderManager(
     context: Context,
-    private val surfaceWidth: Int,         // render surface width
-    private val surfaceHeight: Int,        // render surface height
+    private val surfaceWidth: Int,
+    private val surfaceHeight: Int,
     private val mPreviewDataCbList: CopyOnWriteArrayList<IPreviewDataCallBack>?=null
 ) : SurfaceTexture.OnFrameAvailableListener, Handler.Callback {
     private var mPreviewByteBuffer: ByteBuffer? = null
@@ -103,11 +94,6 @@ class RenderManager(
         Logger.i(TAG, "create RenderManager, Open ES version is ${Utils.getGLESVersion(context)}")
     }
 
-    /**
-     * Rendering processing logic
-     *
-     * Note: EGL must be initialized first, otherwise GL cannot run
-     */
     override fun handleMessage(msg: Message): Boolean {
         when (msg.what) {
             MSG_GL_INIT -> {
@@ -156,13 +142,10 @@ class RenderManager(
                 }
             }
             MSG_GL_DRAW -> {
-                //Render camera data to SurfaceTexture
-                //Set the correction matrix of the image at the same time
                 mCameraSurfaceTexture?.updateTexImage()
                 mCameraSurfaceTexture?.getTransformMatrix(mTransformMatrix)
                 mCameraRender?.setTransformMatrix(mTransformMatrix)
                 val textureId = mEOSTextureId?.let { mCameraRender?.drawFrame(it) }
-                //Filter FBO and rendering
                 textureId?.let { fboId ->
                     var effectId = fboId
                     mEffectList.forEach { effectRender ->
@@ -209,6 +192,7 @@ class RenderManager(
                 mScreenRender?.releaseGLES()
                 mCaptureRender?.releaseGLES()
                 mCameraSurfaceTexture?.setOnFrameAvailableListener(null)
+                mCameraSurfaceTexture?.release()
                 mCameraSurfaceTexture = null
             }
         }
@@ -220,7 +204,6 @@ class RenderManager(
             mCaptureRender!!.getFrameBufferId()
         }?.also { id ->
             mFBOBufferId = id
-            // opengl preview data, format is rgba
             val renderWidth = mCaptureRender?.getRenderWidth() ?: mWidth
             val renderHeight = mCaptureRender?.getRenderHeight() ?: mHeight
             val rgbaLen = renderWidth * renderHeight * 4
@@ -238,14 +221,6 @@ class RenderManager(
         }
     }
 
-    /**
-     * Start render screen
-     *
-     * @param w surface width
-     * @param h surface height
-     * @param outSurface render surface
-     * @param listener acquire camera surface texture, see [CameraSurfaceTextureListener]
-     */
     fun startRenderScreen(w: Int, h: Int, outSurface: Surface?, listener: CameraSurfaceTextureListener? = null) {
         mRenderThread = HandlerThread(RENDER_THREAD)
         mRenderThread?.start()
@@ -253,12 +228,12 @@ class RenderManager(
         Triple(w, h, outSurface).apply {
             mRenderHandler?.obtainMessage(MSG_GL_INIT, this)?.sendToTarget()
         }
-        // wait camera SurfaceTexture created
         try {
             mStFuture.get(3, TimeUnit.SECONDS)
         } catch (e: Exception) {
-            Logger.e(TAG, "wait for creating camera SurfaceTexture failed")
-            null
+            Logger.e(TAG, "wait for creating camera SurfaceTexture failed", e)
+            listener?.onSurfaceTextureAvailable(null)
+            return
         }?.apply {
             setDefaultBufferSize(w, h)
             setOnFrameAvailableListener(this@RenderManager)
@@ -270,86 +245,49 @@ class RenderManager(
         setRenderSize(w, h)
     }
 
-    /**
-     * Stop render screen
-     */
     fun stopRenderScreen() {
         mRenderHandler?.obtainMessage(MSG_GL_RELEASE)?.sendToTarget()
-        mRenderThread?.quitSafely()
+        try {
+            mRenderThread?.quitSafely()
+            mRenderThread?.join(500)
+            if (mRenderThread?.isAlive == true) {
+                Logger.w(TAG, "RenderThread did not finish in time.")
+            }
+        } catch (e: InterruptedException) {
+            Logger.e(TAG, "Interrupted while waiting for RenderThread to finish.", e)
+        }
         mRenderThread = null
         mRenderHandler = null
     }
 
-    /**
-     * Start render codec
-     *
-     * @param inputSurface mediacodec input surface, see [android.media.MediaCodec]
-     * @param width camera preview width
-     * @param height camera preview height
-     */
     fun startRenderCodec(inputSurface: Surface, width: Int, height: Int) {
         Triple(inputSurface, width, height).apply {
             mRenderHandler?.obtainMessage(MSG_GL_START_RENDER_CODEC, this)?.sendToTarget()
         }
     }
 
-    /**
-     * Stop render codec
-     */
     fun stopRenderCodec() {
         mRenderHandler?.obtainMessage(MSG_GL_STOP_RENDER_CODEC)?.sendToTarget()
     }
 
-    /**
-     * Set render size
-     *
-     * @param w surface width
-     * @param h surface height
-     */
     fun setRenderSize(w: Int, h: Int) {
         mRenderHandler?.obtainMessage(MSG_GL_CHANGED_SIZE, Pair(w, h))?.sendToTarget()
     }
 
-    /**
-     * Add render effect
-     *
-     * @param effect add a effect, see [AbstractEffect]
-     */
     fun addRenderEffect(effect: AbstractEffect?) {
         mRenderHandler?.obtainMessage(MSG_GL_ADD_EFFECT, effect)?.sendToTarget()
     }
 
-    /**
-     * Remove render effect
-     *
-     * @param effect a effect removed, see [AbstractEffect]
-     */
     fun removeRenderEffect(effect: AbstractEffect?) {
         mRenderHandler?.obtainMessage(MSG_GL_REMOVE_EFFECT, effect)?.sendToTarget()
     }
 
-    /**
-     * Rotate camera render angle
-     *
-     * @param type rotate angle, null means rotating nothing
-     * see [RotateType.ANGLE_90], [RotateType.ANGLE_270],...etc.
-     */
     fun setRotateType(type: RotateType?) {
         mRenderHandler?.obtainMessage(MSG_GL_ROUTE_ANGLE, type)?.sendToTarget()
     }
 
-    /**
-     * Get cache render effect list
-     * @return current effects
-     */
     fun getCacheEffectList() = mCacheEffectList
 
-    /**
-     * Save image
-     *
-     * @param callBack capture image status, see [ICaptureCallBack]
-     * @param path custom image path
-     */
     fun saveImage(callBack: ICaptureCallBack?, path: String?) {
         this.mCaptureDataCb = callBack
         mRenderHandler?.obtainMessage(MSG_GL_SAVE_IMAGE, path)?.sendToTarget()
@@ -398,13 +336,17 @@ class RenderManager(
             }
             true
         }
-        mScreenRender?.getCurrentContext().let {
-            if (it == null) {
-                throw NullPointerException("Current EGLContext can't be null.")
+        mScreenRender?.getCurrentContext()?.let {
+            if (it == EGL14.EGL_NO_CONTEXT) {
+                Logger.e(TAG, "startRenderCodecInternal: Current EGLContext is EGL_NO_CONTEXT. Cannot share.")
+                stopRenderCodecInternal()
+                return@let
             }
             mRenderCodecHandler?.obtainMessage(MSG_GL_RENDER_CODEC_INIT, Pair(it, surface))?.sendToTarget()
+            mRenderCodecHandler?.obtainMessage(MSG_GL_RENDER_CODEC_CHANGED_SIZE, Pair(w, h))?.sendToTarget()
+        } ?: run {
+            Logger.e(TAG, "startRenderCodecInternal: Current EGLContext is null. Cannot initialize codec renderer.")
         }
-        mRenderCodecHandler?.obtainMessage(MSG_GL_RENDER_CODEC_CHANGED_SIZE, Pair(w, h))?.sendToTarget()
     }
 
     private fun drawFrame2Codec(textureId: Int, timeStamps: Long) {
@@ -415,70 +357,143 @@ class RenderManager(
 
     private fun stopRenderCodecInternal() {
         mRenderCodecHandler?.obtainMessage(MSG_GL_RENDER_CODEC_RELEASE)?.sendToTarget()
-        mRenderCodecThread?.quitSafely()
+        try {
+            mRenderCodecThread?.quitSafely()
+            mRenderCodecThread?.join(500)
+            if (mRenderCodecThread?.isAlive == true) {
+                Logger.w(TAG, "RenderCodecThread did not finish in time.")
+            }
+        } catch (e: InterruptedException) {
+            Logger.e(TAG, "Interrupted while waiting for RenderCodecThread to finish.", e)
+        }
         mRenderCodecThread = null
         mRenderCodecHandler = null
     }
 
-    private fun saveImageInternal(savePath: String?) {
-        if (mCaptureState.get()) {
+    private fun saveImageInternal(savePathFromUser: String?) {
+        if (mCaptureState.getAndSet(true)) {
+            Logger.w(TAG, "saveImageInternal: Capture already in progress.")
             return
         }
-        mCaptureState.set(true)
         mMainHandler.post {
             mCaptureDataCb?.onBegin()
         }
-        val date = mDateFormat.format(System.currentTimeMillis())
-        val title = savePath ?: "IMG_AUSBC_$date"
-        val displayName = savePath ?: "$title.jpg"
-        val path = savePath ?: "$mCameraDir/$displayName"
-        val width = mWidth
-        val height = mHeight
-        // 写入文件
-        // glReadPixels读取的是大端数据，但是我们保存的是小端
-        // 故需要将图片上下颠倒为正
+
+        val actualSavePath: String
+        val title: String
+        val displayName: String
+
+        if (savePathFromUser.isNullOrEmpty()) {
+            val date = mDateFormat.format(System.currentTimeMillis())
+            title = "IMG_AUSBC_$date"
+            displayName = "$title.jpg"
+            actualSavePath = "$mCameraDir/$displayName"
+            Logger.i(TAG, "saveImageInternal: No path provided, generated default: $actualSavePath")
+        } else {
+            actualSavePath = savePathFromUser
+            val tempFile = File(actualSavePath)
+            displayName = tempFile.name
+            title = tempFile.nameWithoutExtension
+            Logger.i(TAG, "saveImageInternal: User provided path: $actualSavePath")
+        }
+
+        val dir = File(actualSavePath).parentFile
+        if (dir != null && !dir.exists()) {
+            if (!dir.mkdirs()) {
+                Logger.e(TAG, "saveImageInternal: Failed to create directory: ${dir.absolutePath}")
+                mMainHandler.post {
+                    mCaptureDataCb?.onError("Failed to create image directory.")
+                }
+                mCaptureState.set(false)
+                return
+            }
+        }
+
+        val captureWidth = mWidth
+        val captureHeight = mHeight
         var fos: FileOutputStream? = null
+        var imagePhysicallySaved = false
+
         try {
-            fos = FileOutputStream(path)
-            GLBitmapUtils.transFrameBufferToBitmap(mFBOBufferId, width, height).apply {
+            Logger.d(TAG, "saveImageInternal: Writing image to: $actualSavePath")
+            fos = FileOutputStream(actualSavePath)
+            GLBitmapUtils.transFrameBufferToBitmap(mFBOBufferId, captureWidth, captureHeight).apply {
                 compress(Bitmap.CompressFormat.JPEG, 100, fos)
                 recycle()
             }
-        } catch (e: IOException) {
+            fos.flush()
+            imagePhysicallySaved = true
+            Logger.i(TAG, "saveImageInternal: Image physically saved to $actualSavePath")
+        } catch (e: Exception) {
+            val errorMsg = e.localizedMessage ?: "Failed to write image to file"
+            Logger.e(TAG, "saveImageInternal: Failed to write image to $actualSavePath, err = $errorMsg", e)
             mMainHandler.post {
-                mCaptureDataCb?.onError(e.localizedMessage)
+                mCaptureDataCb?.onError(errorMsg)
             }
-            Logger.e(TAG, "Failed to write file, err = ${e.localizedMessage}", e)
         } finally {
             try {
                 fos?.close()
             } catch (e: IOException) {
-                Logger.e(TAG, "Failed to write file, err = ${e.localizedMessage}", e)
+                Logger.e(TAG, "saveImageInternal: Failed to close FileOutputStream for $actualSavePath, err = ${e.localizedMessage}", e)
             }
         }
-        //Judge whether it is saved successfully
-        //Update gallery if successful
-        val file = File(path)
-        if (file.length() == 0L) {
-            Logger.e(TAG, "Failed to save file $path")
-            file.delete()
+
+        if (!imagePhysicallySaved) {
+            Logger.e(TAG, "saveImageInternal: Physical image save FAILED for $actualSavePath. Not proceeding further.")
+            File(actualSavePath).delete()
             mCaptureState.set(false)
             return
         }
-        val values = ContentValues()
-        values.put(MediaStore.Images.ImageColumns.TITLE, title)
-        values.put(MediaStore.Images.ImageColumns.DISPLAY_NAME, displayName)
-        values.put(MediaStore.Images.ImageColumns.DATA, path)
-        values.put(MediaStore.Images.ImageColumns.DATE_TAKEN, date)
-        values.put(MediaStore.Images.ImageColumns.WIDTH, width)
-        values.put(MediaStore.Images.ImageColumns.HEIGHT, height)
-        mContext.contentResolver?.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+
+        val file = File(actualSavePath)
+        if (!file.exists() || file.length() == 0L) {
+            val errorDetail = if (!file.exists()) "File not found." else "File is empty."
+            Logger.e(TAG, "saveImageInternal: Image file check failed after saving: $errorDetail Path: $actualSavePath")
+            if (file.exists()) file.delete()
+            mMainHandler.post {
+                mCaptureDataCb?.onError("Image save resulted in missing or empty file.")
+            }
+            mCaptureState.set(false)
+            return
+        }
+
+        var mediaStoreError: String? = null
+        if (mContext != null) {
+            try {
+                Logger.d(TAG, "saveImageInternal: Attempting MediaStore insert for $actualSavePath")
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.ImageColumns.TITLE, title)
+                    put(MediaStore.Images.ImageColumns.DISPLAY_NAME, displayName) // Use resolved displayName
+                    put(MediaStore.Images.ImageColumns.DATA, actualSavePath)
+                    put(MediaStore.Images.ImageColumns.DATE_TAKEN, System.currentTimeMillis())
+                    put(MediaStore.Images.ImageColumns.WIDTH, captureWidth)
+                    put(MediaStore.Images.ImageColumns.HEIGHT, captureHeight)
+                    put(MediaStore.Images.ImageColumns.MIME_TYPE, "image/jpeg")
+                    if (MediaUtils.isAboveQ()) {
+                        // Use the parent directory name of actualSavePath for RELATIVE_PATH if it's meaningful
+                        val parentDirName = file.parentFile?.name ?: "UVCCamera"
+                        put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + File.separator + parentDirName)
+                        put(MediaStore.Images.Media.IS_PENDING, 0)
+                    }
+                }
+                mContext!!.contentResolver?.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                Logger.i(TAG, "saveImageInternal: MediaStore insert attempt finished for $actualSavePath")
+            } catch (e: Exception) {
+                mediaStoreError = e.localizedMessage ?: "MediaStore.insert failed"
+                Logger.e(TAG, "saveImageInternal: MediaStore insert failed for $actualSavePath. Error: $mediaStoreError", e)
+            }
+        } else {
+            Logger.w(TAG, "saveImageInternal: mContext is null, skipping MediaStore insert.")
+            mediaStoreError = "Context was null"
+        }
+
         mMainHandler.post {
-            mCaptureDataCb?.onComplete(path)
+            Logger.i(TAG, "saveImageInternal: Calling onComplete for physically saved image: $actualSavePath. MediaStore status: ${mediaStoreError ?: "Not attempted or success"}")
+            mCaptureDataCb?.onComplete(actualSavePath)
         }
         mCaptureState.set(false)
         if (Utils.debugCamera) {
-            Logger.i(TAG, "captureImageInternal save path = $path")
+            Logger.i(TAG, "captureImageInternal finished for path = $actualSavePath")
         }
     }
 
@@ -495,17 +510,7 @@ class RenderManager(
         }
     }
 
-    /**
-     * Camera surface texture listener
-     *
-     * @constructor Create empty Camera surface texture listener
-     */
     interface CameraSurfaceTextureListener {
-        /**
-         * On surface texture available
-         *
-         * @param surfaceTexture camera render surface texture
-         */
         fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture?)
     }
 
@@ -513,7 +518,6 @@ class RenderManager(
         private const val TAG = "RenderManager"
         private const val RENDER_THREAD = "gl_render"
         private const val RENDER_CODEC_THREAD = "gl_render_codec"
-        // render
         private const val MSG_GL_INIT = 0x00
         private const val MSG_GL_DRAW = 0x01
         private const val MSG_GL_RELEASE = 0x02
@@ -524,8 +528,6 @@ class RenderManager(
         private const val MSG_GL_REMOVE_EFFECT = 0x07
         private const val MSG_GL_SAVE_IMAGE = 0x08
         private const val MSG_GL_ROUTE_ANGLE = 0x09
-
-        // codec
         private const val MSG_GL_RENDER_CODEC_INIT = 0x11
         private const val MSG_GL_RENDER_CODEC_CHANGED_SIZE = 0x12
         private const val MSG_GL_RENDER_CODEC_DRAW = 0x13
