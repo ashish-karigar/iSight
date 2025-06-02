@@ -38,14 +38,25 @@
         app:backgroundTint="#80FFFFFF"
         app:tint="#000000" />
 
+    <!-- Back Button -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/back_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignStart="@id/status_text"
+        android:layout_marginTop="10dp"
+        app:srcCompat="@drawable/ic_arrow_back"
+        app:backgroundTint="#00000000"
+        app:tint="#FFFFFF" />
+
     <!-- Status text display -->
     <TextView
         android:id="@+id/status_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
         android:layout_marginBottom="16dp"
+        android:layout_marginStart="10dp"
         android:background="#80000000"
         android:padding="8dp"
         android:text="@string/status_no_device"

@@ -56,6 +56,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
     private TextView mStatusTextView;
     private FloatingActionButton mCaptureButton; // Declaration was already fine
     private FloatingActionButton mRecordButton;
+    private FloatingActionButton mBackButton;
 
     // Camera
     private MultiCameraClient mCameraClient;
@@ -170,6 +171,9 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
         mStatusTextView = findViewById(R.id.status_text);
         mCaptureButton = findViewById(R.id.capture_button); // <<<< UNCOMMENTED / ENSURED
         mRecordButton = findViewById(R.id.record_button);
+        mBackButton = findViewById(R.id.back_button);
+
+        mBackButton.setOnClickListener(v -> finish());
 
         mCameraView = new AspectRatioTextureView(this);
 
