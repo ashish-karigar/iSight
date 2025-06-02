@@ -9,9 +9,13 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
+import android.view.View;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.RelativeLayout;
+import android.view.Gravity;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -142,7 +146,25 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
+        if (getWindow() != null) {
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_FULLSCREEN |
+                            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
+                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            );
+            getWindow().setFlags(
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN
+            );
+        }
+
         setContentView(R.layout.activity_main);
+
 
         mCameraViewContainer = findViewById(R.id.camera_preview);
         mStatusTextView = findViewById(R.id.status_text);
@@ -150,7 +172,17 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
         mRecordButton = findViewById(R.id.record_button);
 
         mCameraView = new AspectRatioTextureView(this);
+
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.gravity = Gravity.CENTER;  // <-- This centers it inside the FrameLayout
+
+        mCameraView.setLayoutParams(params);
+
         mCameraViewContainer.addView(mCameraView);
+//        mCameraView.setRotation(90); // Rotates the view 90 degrees clockwise
 
         if (mCaptureButton != null) { // <<<< UNCOMMENTED / ENSURED
             mCaptureButton.setOnClickListener(v -> {

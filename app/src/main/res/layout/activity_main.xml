@@ -7,34 +7,34 @@
     tools:context=".MainActivity">
 
     <!-- Camera preview surface container -->
+
     <FrameLayout
         android:id="@+id/camera_preview"
-        android:layout_width="match_parent"
+        android:layout_width="692dp"
         android:layout_height="match_parent"
-        android:layout_centerInParent="true" />
+        android:layout_centerInParent="true"/>
 
+    <!-- Record Button -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/record_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="80dp"
-        android:layout_marginEnd="16dp"
+        android:layout_centerVertical="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="24dp"
         app:srcCompat="@android:drawable/ic_media_play"
         app:backgroundTint="#80FFFFFF"
-        app:tint="#000000"/>
+        app:tint="#000000" />
 
-    <!--     Capture button -->
+    <!-- Capture Button -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/capture_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="false"
-        android:layout_marginStart="80dp"
-        android:layout_marginBottom="80dp"
-        android:src="@android:drawable/ic_menu_camera"
+        android:layout_below="@id/record_button"
+        android:layout_alignEnd="@id/record_button"
+        android:layout_marginTop="64dp"
+        app:srcCompat="@android:drawable/ic_menu_camera"
         app:backgroundTint="#80FFFFFF"
         app:tint="#000000" />
 

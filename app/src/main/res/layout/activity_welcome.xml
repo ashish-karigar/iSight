@@ -7,7 +7,7 @@
     android:padding="24dp">
 
     <TextView
-        android:text="Welcome to My Lens"
+        android:text="@string/welcome_to_my_lens"
         android:textSize="24sp"
         android:layout_marginBottom="32dp"
         android:textStyle="bold"
@@ -17,21 +17,30 @@
 
     <Button
         android:id="@+id/tutorial_button"
-        android:text="Tutorial"
+        android:text="@string/tutorial"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content"
+        android:background="@drawable/rounded_button"
+        android:textColor="#000"
+        android:textAllCaps="false"/>
 
     <Button
         android:id="@+id/select_storage_button"
-        android:text="Select Storage Location"
+        android:text="@string/select_storage_location"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"/>
+        android:layout_marginTop="16dp"
+        android:background="@drawable/rounded_button"
+        android:textColor="#000"
+        android:textAllCaps="false" />
 
     <Button
         android:id="@+id/preview_button"
-        android:text="Open Camera Preview"
+        android:text="@string/open_camera_preview"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"/>
+        android:layout_marginTop="16dp"
+        android:background="@drawable/rounded_button"
+        android:textColor="#000"
+        android:textAllCaps="false"/>
 </LinearLayout>

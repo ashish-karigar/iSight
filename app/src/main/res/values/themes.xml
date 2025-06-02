@@ -6,8 +6,8 @@
     <!-- Base application theme. -->
     <style name="Theme.UVCCameraPreview" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="colorPrimary">@color/purple_200</item>
+        <item name="colorPrimaryVariant">@color/purple_200</item>
         <item name="colorOnPrimary">@color/white</item>
         <!-- Secondary brand color. -->
         <item name="colorSecondary">@color/teal_200</item>
@@ -16,5 +16,12 @@
         <!-- Status bar color. -->
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
+        <!-- Disable ALL CAPS globally for Buttons -->
+        <item name="buttonStyle">@style/MyButton</item>
+    </style>
+
+    <!-- Your custom base button style -->
+    <style name="MyButton" parent="Widget.Material3.Button">
+        <item name="android:textAllCaps">false</item>
     </style>
 </resources>
