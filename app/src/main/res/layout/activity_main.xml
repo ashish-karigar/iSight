@@ -38,16 +38,34 @@
         app:backgroundTint="#80FFFFFF"
         app:tint="#000000" />
 
-    <!-- Back Button -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+<!--    &lt;!&ndash; Back Button &ndash;&gt;-->
+<!--    <com.google.android.material.floatingactionbutton.FloatingActionButton-->
+<!--        android:id="@+id/back_button"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_alignStart="@id/status_text"-->
+<!--        android:layout_marginTop="10dp"-->
+<!--        app:srcCompat="@drawable/ic_arrow_back"-->
+<!--        app:backgroundTint="#00000000"-->
+<!--        app:tint="#FFFFFF" />-->
+
+    <!-- Menu Button (replaces FAB back button) -->
+    <Button
         android:id="@+id/back_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignStart="@id/status_text"
         android:layout_marginTop="10dp"
-        app:srcCompat="@drawable/ic_arrow_back"
-        app:backgroundTint="#00000000"
-        app:tint="#FFFFFF" />
+        android:text="Menu"
+        android:backgroundTint="#80FFFFFF"
+        android:textColor="#fff"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:elevation="4dp"
+        android:background="@drawable/menu_button" />
+
 
     <!-- Status text display -->
     <TextView

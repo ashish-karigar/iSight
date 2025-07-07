@@ -11,6 +11,7 @@ import android.os.Environment;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,6 +36,7 @@ import com.jiangdg.usb.USBMonitor;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
@@ -56,7 +58,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
     private TextView mStatusTextView;
     private FloatingActionButton mCaptureButton; // Declaration was already fine
     private FloatingActionButton mRecordButton;
-    private FloatingActionButton mBackButton;
+    private Button mBackButton;
 
     // Camera
     private MultiCameraClient mCameraClient;
@@ -209,17 +211,34 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
         mTempSaveDir = getExternalFilesDir(Environment.DIRECTORY_MOVIES).getAbsolutePath();
         Log.d(TAG, "Temporary save directory for videos: " + mTempSaveDir); // Clarified log
         SharedPreferences prefs = getSharedPreferences("uvc_prefs", MODE_PRIVATE);
-        String treeStr = prefs.getString("video_folder_uri", null);
+        String treeStr = prefs.getString("effective_folder_uri", null);
         if (treeStr == null) {
-            Log.i(TAG, "No saved SAF URI found, prompting user to pick folder.");
-            pickFolder();
+            // This case should ideally be handled by WelcomeActivity, but for robustness:
+            Log.e(TAG, "No saved SAF URI found in MainActivity. This should have been set in WelcomeActivity.");
+            // Fallback to internal app directory or prompt again if absolutely necessary
+            mTreeUri = Uri.fromFile(new File(getExternalFilesDir(Environment.DIRECTORY_DCIM), "UVCCamera"));
+            if (!new File(mTreeUri.getPath()).exists()) {
+                new File(mTreeUri.getPath()).mkdirs();
+            }
+            Log.i(TAG, "Falling back to default internal URI: " + mTreeUri.toString());
+            Toast.makeText(this, "No output folder set, saving to app's internal UVCCamera folder.", Toast.LENGTH_LONG);
         } else {
             mTreeUri = Uri.parse(treeStr);
             Log.i(TAG, "Loaded saved SAF URI: " + mTreeUri.toString());
+            // If the loaded URI is a file URI (from the default), ensure directory exists
+            if ("file".equals(mTreeUri.getScheme())) { // <-- NEW CHECK
+                File defaultDir = new File(mTreeUri.getPath());
+                if (!defaultDir.exists()) {
+                    defaultDir.mkdirs();
+                }
+            }
         }
 
-        if (checkAndRequestPermissions()) {
+        if (arePermissionsGranted()) {
             initializeCamera();
+        } else {
+            Toast.makeText(this, "Permissions are required. Please restart and grant permissions.", Toast.LENGTH_LONG).show();
+            finish(); // Close activity if permissions are missing.
         }
     }
 
@@ -251,6 +270,10 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
     }
 
     private String getFileNameFromTreeUri(Uri treeUri) {
+        // This method is primarily for SAF Uris. For file Uris, we can just get the last segment.
+        if ("file".equals(treeUri.getScheme())) { // <-- NEW CHECK
+            return new File(treeUri.getPath()).getName();
+        }
         DocumentFile documentFile = DocumentFile.fromTreeUri(this, treeUri);
         if (documentFile != null && documentFile.getName() != null) {
             return documentFile.getName();
@@ -258,49 +281,41 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
         return "Selected Folder";
     }
 
-    private boolean checkAndRequestPermissions() {
-        List<String> need = new ArrayList<>();
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                != PackageManager.PERMISSION_GRANTED) {
-            need.add(Manifest.permission.CAMERA);
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
-            need.add(Manifest.permission.RECORD_AUDIO);
-        }
-
-        if (!need.isEmpty()) {
-            Log.d(TAG, "Requesting permissions: " + need);
-            ActivityCompat.requestPermissions(this, need.toArray(new String[0]), REQUEST_PERMISSIONS);
-            return false;
-        }
-        Log.d(TAG, "All required permissions already granted.");
-        return true;
+    /**
+     * Checks if permissions are granted without requesting them.
+     * @return true if all necessary permissions are granted, false otherwise.
+     */
+    private boolean arePermissionsGranted() {
+        boolean camera = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED;
+        boolean audio = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED;
+        return camera && audio;
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_PERMISSIONS) {
-            boolean allGranted = true;
-            for (int i = 0; i < grantResults.length; i++) {
-                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
-                    allGranted = false;
-                    Log.w(TAG, "Permission denied: " + permissions[i]);
-                } else {
-                    Log.d(TAG, "Permission granted: " + permissions[i]);
-                }
-            }
-            if (allGranted) {
-                Log.d(TAG, "All permissions granted by user.");
-                initializeCamera();
-            } else {
-                Toast.makeText(this, "Permissions are required to use the camera.", Toast.LENGTH_LONG).show();
-                Log.e(TAG, "Not all permissions were granted.");
-            }
-        }
-    }
+//    @Override
+//    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+//                                           @NonNull int[] grantResults) {
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+//        if (requestCode == REQUEST_PERMISSIONS) {
+//            boolean allGranted = true;
+//            for (int i = 0; i < grantResults.length; i++) {
+//                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
+//                    allGranted = false;
+//                    Log.w(TAG, "Permission denied: " + permissions[i]);
+//                } else {
+//                    Log.d(TAG, "Permission granted: " + permissions[i]);
+//                }
+//            }
+//            if (allGranted) {
+//                Log.d(TAG, "All permissions granted by user.");
+//                initializeCamera();
+//            } else {
+//                Toast.makeText(this, "Permissions are required to use the camera.", Toast.LENGTH_LONG).show();
+//                Log.e(TAG, "Not all permissions were granted.");
+//            }
+//        }
+//    }
 
     private void initializeCamera() {
         Log.d(TAG, "Initializing camera...");
@@ -449,15 +464,10 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
     }
 
     // Method for copying recorded videos
-    private void copyToFolder(String localPath) { // Renamed from copyVideoToSafFolder for clarity
+    private void copyToFolder(String localPath) {
         if (localPath == null) {
             Log.e(TAG, "copyToFolder: localPath is null for video. Cannot copy.");
             runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Temp video file path missing.", Toast.LENGTH_LONG).show());
-            return;
-        }
-        if (mTreeUri == null) {
-            Log.w(TAG, "copyToFolder: mTreeUri is null for video. Cannot copy.");
-            runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Output folder not selected.", Toast.LENGTH_LONG).show());
             return;
         }
         File localFile = new File(localPath);
@@ -473,85 +483,168 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
         }
 
         String name = localFile.getName();
-        Log.d(TAG, "copyToFolder: Attempting to copy VIDEO '" + name + "' ("+localFile.length()+" bytes) from '" + localPath + "' to SAF URI: " + mTreeUri.toString());
-
-        DocumentFile tree = DocumentFile.fromTreeUri(this, mTreeUri);
-        if (tree == null || !tree.canWrite()) {
-            Log.e(TAG, "copyToFolder: Cannot write to selected SAF tree URI (null or can't write) for video. URI: " + mTreeUri.toString());
-            runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Cannot write video to output folder.", Toast.LENGTH_LONG).show());
-            return;
-        }
-
-        // For videos, save to the root of the selected SAF tree or a "Videos" subfolder
-        DocumentFile videoOutputDirectory = tree; // Default to root
-        DocumentFile videosSubDir = tree.findFile("Videos");
-        if (videosSubDir == null || !videosSubDir.isDirectory()) {
-            videosSubDir = tree.createDirectory("Videos");
-        }
-        if (videosSubDir != null && videosSubDir.isDirectory() && videosSubDir.canWrite()) {
-            videoOutputDirectory = videosSubDir;
-            Log.d(TAG, "copyToFolder: Using 'Videos' subdirectory in SAF: " + videoOutputDirectory.getUri());
-        } else {
-            Log.w(TAG, "copyToFolder: Could not create/use 'Videos' subdirectory. Saving video to SAF root: " + tree.getUri());
-        }
-
-
-        DocumentFile dest = null;
-        OutputStream out = null;
-        InputStream in = null;
         boolean success = false;
-        try {
-            dest = videoOutputDirectory.createFile("video/mp4", name);
-            if (dest == null || !dest.canWrite()) {
-                Log.e(TAG, "copyToFolder: Failed to create destination video file in SAF tree, or cannot write. Dest URI: " + (dest != null ? dest.getUri().toString() : "null"));
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Could not create video file in output folder.", Toast.LENGTH_LONG).show());
-                return;
-            }
-            Log.d(TAG, "copyToFolder: Destination SAF URI created for video: " + dest.getUri().toString());
 
-            out = getContentResolver().openOutputStream(dest.getUri());
-            in = new FileInputStream(localFile);
+        if (mTreeUri != null && "content".equals(mTreeUri.getScheme())) {
+            // SAF (Storage Access Framework) path
+            Log.d(TAG, "copyToFolder: Attempting to copy VIDEO '" + name + "' ("+localFile.length()+" bytes) from '" + localPath + "' to SAF URI: " + mTreeUri.toString());
 
-            if (out == null) {
-                Log.e(TAG, "copyToFolder: getContentResolver().openOutputStream(dest.getUri()) returned null for video.");
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Could not open output stream for video.", Toast.LENGTH_LONG).show());
-                if(dest.exists()) dest.delete();
-                return;
-            }
-
-            byte[] buf = new byte[8192];
-            int len;
-            long totalCopied = 0;
-            while ((len = in.read(buf)) > 0) {
-                out.write(buf, 0, len);
-                totalCopied += len;
-            }
-            out.flush();
-            success = true;
-            Log.d(TAG, "copyToFolder: Successfully copied " + totalCopied + " bytes (video) to " + dest.getUri().toString());
-            runOnUiThread(() -> Toast.makeText(MainActivity.this, "Video saved: " + name, Toast.LENGTH_LONG).show());
-
-        } catch (Exception ex) {
-            Log.e(TAG, "copyToFolder: Video copy process failed", ex);
-            runOnUiThread(() -> Toast.makeText(MainActivity.this, "Video copy to folder failed: " + ex.getMessage(), Toast.LENGTH_LONG).show());
-            success = false;
-        } finally {
-            try {
-                if (in != null) in.close();
-                if (out != null) out.close();
-            } catch (Exception e) {
-                Log.e(TAG, "copyToFolder: Error closing streams for video", e);
-            }
-            if (!success && dest != null && dest.exists()) {
-                Log.w(TAG, "copyToFolder: Deleting incomplete/failed SAF destination video file: " + dest.getUri().toString());
-                dest.delete();
-            }
-            if (localFile.exists()) {
-                if(localFile.delete()) {
-                    Log.d(TAG, "copyToFolder: Deleted temporary video file: " + localPath);
-                } else {
-                    Log.w(TAG, "copyToFolder: Failed to delete temporary video file: " + localPath);
+            DocumentFile tree = DocumentFile.fromTreeUri(this, mTreeUri);
+            if (tree == null || !tree.canWrite()) {
+                Log.e(TAG, "copyToFolder: Cannot write to selected SAF tree URI (null or can't write) for video. URI: " + mTreeUri.toString());
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Cannot write video to output folder.", Toast.LENGTH_LONG).show());
+                // Try to delete local file even if SAF copy failed
+                if (localFile.exists()) {
+                    if(localFile.delete()) {
+                        Log.d(TAG, "copyToFolder: Deleted temporary video file after SAF write failure: " + localPath);
+                    } else {
+                        Log.w(TAG, "copyToFolder: Failed to delete temporary video file after SAF write failure: " + localPath);
+                    }
                 }
+                return;
+            }
+
+            DocumentFile videoOutputDirectory = tree;
+            DocumentFile videosSubDir = tree.findFile("Videos");
+            if (videosSubDir == null || !videosSubDir.isDirectory()) {
+                videosSubDir = tree.createDirectory("Videos");
+            }
+            if (videosSubDir != null && videosSubDir.isDirectory() && videosSubDir.canWrite()) {
+                videoOutputDirectory = videosSubDir;
+                Log.d(TAG, "copyToFolder: Using 'Videos' subdirectory in SAF: " + videoOutputDirectory.getUri());
+            } else {
+                Log.w(TAG, "copyToFolder: Could not create/use 'Videos' subdirectory. Saving video to SAF root: " + tree.getUri());
+            }
+
+
+            DocumentFile dest = null;
+            OutputStream out = null;
+            InputStream in = null;
+            try {
+                dest = videoOutputDirectory.createFile("video/mp4", name);
+                if (dest == null || !dest.canWrite()) {
+                    Log.e(TAG, "copyToFolder: Failed to create destination video file in SAF tree, or cannot write. Dest URI: " + (dest != null ? dest.getUri().toString() : "null"));
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Could not create video file in output folder.", Toast.LENGTH_LONG).show());
+                    return;
+                }
+                Log.d(TAG, "copyToFolder: Destination SAF URI created for video: " + dest.getUri().toString());
+
+                out = getContentResolver().openOutputStream(dest.getUri());
+                in = new FileInputStream(localFile);
+
+                if (out == null) {
+                    Log.e(TAG, "copyToFolder: getContentResolver().openOutputStream(dest.getUri()) returned null for video.");
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Could not open output stream for video.", Toast.LENGTH_LONG).show());
+                    if(dest.exists()) dest.delete();
+                    return;
+                }
+
+                byte[] buf = new byte[8192];
+                int len;
+                long totalCopied = 0;
+                while ((len = in.read(buf)) > 0) {
+                    out.write(buf, 0, len);
+                    totalCopied += len;
+                }
+                out.flush();
+                success = true;
+                Log.d(TAG, "copyToFolder: Successfully copied " + totalCopied + " bytes (video) to " + dest.getUri().toString());
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Video saved: " + name, Toast.LENGTH_LONG).show());
+
+            } catch (Exception ex) {
+                Log.e(TAG, "copyToFolder: Video SAF copy process failed", ex);
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Video copy to folder failed: " + ex.getMessage(), Toast.LENGTH_LONG).show());
+                success = false;
+            } finally {
+                try {
+                    if (in != null) in.close();
+                    if (out != null) out.close();
+                } catch (Exception e) {
+                    Log.e(TAG, "copyToFolder: Error closing streams for video", e);
+                }
+                if (!success && dest != null && dest.exists()) {
+                    Log.w(TAG, "copyToFolder: Deleting incomplete/failed SAF destination video file: " + dest.getUri().toString());
+                    dest.delete();
+                }
+                // Always try to delete the temporary local file after attempting copy (success or failure)
+                if (localFile.exists()) {
+                    if(localFile.delete()) {
+                        Log.d(TAG, "copyToFolder: Deleted temporary video file after SAF write failure: " + localPath);
+                    } else {
+                        Log.w(TAG, "copyToFolder: Failed to delete temporary video file after SAF write failure: " + localPath);
+                    }
+                }
+            }
+        } else if (mTreeUri != null && "file".equals(mTreeUri.getScheme())) {
+            // Direct file system path (for default internal storage)
+            File outputDir = new File(mTreeUri.getPath(), "Videos");
+            if (!outputDir.exists()) {
+                if (!outputDir.mkdirs()) {
+                    Log.e(TAG, "copyToFolder: Failed to create default video output directory: " + outputDir.getAbsolutePath());
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Cannot create default video output directory.", Toast.LENGTH_LONG).show());
+                    // Clean up temp file
+                    if (localFile.exists()) {
+                        if(localFile.delete()) {
+                            Log.d(TAG, "copyToFolder: Deleted temporary video file after dir creation failure: " + localPath);
+                        } else {
+                            Log.w(TAG, "copyToFolder: Failed to delete temporary video file after dir creation failure: " + localPath);
+                        }
+                    }
+                    return;
+                }
+            }
+
+            File destFile = new File(outputDir, name);
+            Log.d(TAG, "copyToFolder: Attempting to copy VIDEO '" + name + "' to local path: " + destFile.getAbsolutePath());
+
+            InputStream in = null;
+            OutputStream out = null;
+            try {
+                in = new FileInputStream(localFile);
+                out = new FileOutputStream(destFile);
+
+                byte[] buf = new byte[8192];
+                int len;
+                long totalCopied = 0;
+                while ((len = in.read(buf)) > 0) {
+                    out.write(buf, 0, len);
+                    totalCopied += len;
+                }
+                out.flush();
+                success = true;
+                Log.d(TAG, "copyToFolder: Successfully copied " + totalCopied + " bytes (video) to " + destFile.getAbsolutePath());
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Video saved: " + name, Toast.LENGTH_LONG).show());
+            } catch (Exception ex) {
+                Log.e(TAG, "copyToFolder: Video direct file copy process failed", ex);
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Video copy to default folder failed: " + ex.getMessage(), Toast.LENGTH_LONG).show());
+                success = false;
+            } finally {
+                try {
+                    if (in != null) in.close();
+                    if (out != null) out.close();
+                } catch (Exception e) {
+                    Log.e(TAG, "copyToFolder: Error closing streams for direct video copy", e);
+                }
+                if (!success && destFile.exists()) {
+                    Log.w(TAG, "copyToFolder: Deleting incomplete/failed direct destination video file: " + destFile.getAbsolutePath());
+                    destFile.delete();
+                }
+                // Always delete the temporary local file
+                if (localFile.exists()) {
+                    if(localFile.delete()) {
+                        Log.d(TAG, "copyToFolder: Deleted temporary video file: " + localPath);
+                    } else {
+                        Log.w(TAG, "copyToFolder: Failed to delete temporary video file: " + localPath);
+                    }
+                }
+            }
+        } else {
+            Log.e(TAG, "copyToFolder: No valid URI scheme (neither content:// nor file://) or mTreeUri is null. Cannot copy video.");
+            runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: No valid output folder configured for video.", Toast.LENGTH_LONG).show());
+            // If no valid URI, the temp file should probably be kept or deleted based on your policy.
+            // For now, let's just log and leave it.
+            if (localFile.exists()) {
+                Log.w(TAG, "copyToFolder: Retaining temporary video file as no valid output path was found: " + localPath);
             }
         }
     }
@@ -576,12 +669,11 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
     }
 
     private void copyPhotoToSafFolder(String localPhotoPath) {
-        if (localPhotoPath == null || mTreeUri == null) {
-            Log.w(TAG, "copyPhotoToSafFolder: Missing localPhotoPath ("+localPhotoPath+") or mTreeUri ("+mTreeUri+").");
-            runOnUiThread(() -> Toast.makeText(MainActivity.this, "Photo saved locally, but folder not selected for copy.", Toast.LENGTH_LONG).show());
+        if (localPhotoPath == null) {
+            Log.w(TAG, "copyPhotoToSafFolder: Missing localPhotoPath ("+localPhotoPath+").");
+            runOnUiThread(() -> Toast.makeText(MainActivity.this, "Photo saved locally, but path missing for copy.", Toast.LENGTH_LONG).show());
             return;
         }
-
         File localFile = new File(localPhotoPath);
         if (!localFile.exists() || localFile.length() == 0) {
             Log.e(TAG, "copyPhotoToSafFolder: Local photo file missing or empty at: " + localPhotoPath);
@@ -590,78 +682,160 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
         }
 
         String name = localFile.getName();
-        Log.d(TAG, "copyPhotoToSafFolder: Attempting to copy PHOTO '" + name + "' to SAF URI: " + mTreeUri.toString());
-
-        DocumentFile tree = DocumentFile.fromTreeUri(this, mTreeUri);
-        if (tree == null || !tree.canWrite()) {
-            Log.e(TAG, "copyPhotoToSafFolder: Cannot write to selected SAF tree URI for photo.");
-            runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Cannot write photo to selected folder.", Toast.LENGTH_LONG).show());
-            return;
-        }
-
-        // Try to use or create a "Photos" subdirectory in the chosen SAF location
-        DocumentFile photoOutputDirectory = tree; // Default to root
-        DocumentFile photosSubDir = tree.findFile("Photos");
-        if (photosSubDir == null || !photosSubDir.isDirectory()) {
-            Log.d(TAG, "copyPhotoToSafFolder: 'Photos' subdirectory not found, attempting to create it.");
-            photosSubDir = tree.createDirectory("Photos");
-        }
-
-        if (photosSubDir != null && photosSubDir.isDirectory() && photosSubDir.canWrite()) {
-            photoOutputDirectory = photosSubDir;
-            Log.d(TAG, "copyPhotoToSafFolder: Using 'Photos' subdirectory in SAF: " + photoOutputDirectory.getUri());
-        } else {
-            Log.w(TAG, "copyPhotoToSafFolder: Could not create/use 'Photos' subdirectory. Saving photo to SAF root: " + tree.getUri());
-        }
-
-
-        DocumentFile destFile = null;
         boolean success = false;
-        try {
-            destFile = photoOutputDirectory.createFile("image/jpeg", name);
-            if (destFile == null || !destFile.canWrite()) {
-                Log.e(TAG, "copyPhotoToSafFolder: Failed to create destination photo file in SAF. Dest URI (if created): " + (destFile != null ? destFile.getUri().toString() : "null"));
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Could not create photo file in output folder.", Toast.LENGTH_LONG).show());
+
+        if (mTreeUri != null && "content".equals(mTreeUri.getScheme())) {
+            // SAF (Storage Access Framework) path
+            Log.d(TAG, "copyPhotoToSafFolder: Attempting to copy PHOTO '" + name + "' to SAF URI: " + mTreeUri.toString());
+
+            DocumentFile tree = DocumentFile.fromTreeUri(this, mTreeUri);
+            if (tree == null || !tree.canWrite()) {
+                Log.e(TAG, "copyPhotoToSafFolder: Cannot write to selected SAF tree URI for photo.");
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Cannot write photo to selected folder.", Toast.LENGTH_LONG).show());
+                // Clean up temp file
+                if (localFile.exists()) {
+                    if (localFile.delete()) {
+                        Log.d(TAG, "copyPhotoToSafFolder: Deleted temporary photo file after SAF write failure: " + localPhotoPath);
+                    } else {
+                        Log.w(TAG, "copyPhotoToSafFolder: Failed to delete temporary photo file after SAF write failure: " + localPhotoPath);
+                    }
+                }
                 return;
             }
 
-            Log.d(TAG, "copyPhotoToSafFolder: Destination SAF URI created for photo: " + destFile.getUri().toString());
+            DocumentFile photoOutputDirectory = tree;
+            DocumentFile photosSubDir = tree.findFile("Photos");
+            if (photosSubDir == null || !photosSubDir.isDirectory()) {
+                Log.d(TAG, "copyPhotoToSafFolder: 'Photos' subdirectory not found, attempting to create it.");
+                photosSubDir = tree.createDirectory("Photos");
+            }
 
-            try (InputStream in = new FileInputStream(localFile);
-                 OutputStream out = getContentResolver().openOutputStream(destFile.getUri())) {
-                if (out == null) {
-                    Log.e(TAG, "copyPhotoToSafFolder: getContentResolver().openOutputStream(destFile.getUri()) returned null for photo.");
-                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Could not open output stream for photo.", Toast.LENGTH_LONG).show());
-                    if (destFile.exists()) destFile.delete();
+            if (photosSubDir != null && photosSubDir.isDirectory() && photosSubDir.canWrite()) {
+                photoOutputDirectory = photosSubDir;
+                Log.d(TAG, "copyPhotoToSafFolder: Using 'Photos' subdirectory in SAF: " + photoOutputDirectory.getUri());
+            } else {
+                Log.w(TAG, "copyPhotoToSafFolder: Could not create/use 'Photos' subdirectory. Saving photo to SAF root: " + tree.getUri());
+            }
+
+            DocumentFile destFile = null;
+            try {
+                destFile = photoOutputDirectory.createFile("image/jpeg", name);
+                if (destFile == null || !destFile.canWrite()) {
+                    Log.e(TAG, "copyPhotoToSafFolder: Failed to create destination photo file in SAF. Dest URI (if created): " + (destFile != null ? destFile.getUri().toString() : "null"));
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Could not create photo file in output folder.", Toast.LENGTH_LONG).show());
                     return;
                 }
+
+                Log.d(TAG, "copyPhotoToSafFolder: Destination SAF URI created for photo: " + destFile.getUri().toString());
+
+                try (InputStream in = new FileInputStream(localFile);
+                     OutputStream out = getContentResolver().openOutputStream(destFile.getUri())) {
+                    if (out == null) {
+                        Log.e(TAG, "copyPhotoToSafFolder: getContentResolver().openOutputStream(destFile.getUri()) returned null for photo.");
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Could not open output stream for photo.", Toast.LENGTH_LONG).show());
+                        if (destFile.exists()) destFile.delete();
+                        return;
+                    }
+                    byte[] buf = new byte[8192];
+                    int len;
+                    long totalCopied = 0;
+                    while ((len = in.read(buf)) > 0) {
+                        out.write(buf, 0, len);
+                        totalCopied +=len;
+                    }
+                    out.flush();
+                    success = true;
+                    Log.d(TAG, "copyPhotoToSafFolder: Successfully copied photo ("+totalCopied+" bytes) to " + destFile.getUri().toString());
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Photo saved to folder: " + name, Toast.LENGTH_LONG).show());
+                }
+            } catch (Exception ex) {
+                Log.e(TAG, "copyPhotoToSafFolder: Photo SAF copy process failed", ex);
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Photo copy to folder failed: " + ex.getMessage(), Toast.LENGTH_LONG).show());
+                success = false;
+            } finally {
+                if (!success && destFile != null && destFile.exists()) {
+                    Log.w(TAG, "copyPhotoToSafFolder: Deleting incomplete/failed SAF destination photo: " + destFile.getUri().toString());
+                    destFile.delete();
+                }
+                // Always try to delete the temporary local file after attempting copy (success or failure)
+                if (localFile.exists()) {
+                    if (localFile.delete()) {
+                        Log.d(TAG, "copyPhotoToSafFolder: Deleted temporary photo file: " + localPhotoPath);
+                    } else {
+                        Log.w(TAG, "copyPhotoToSafFolder: Failed to delete temporary photo file: " + localPhotoPath);
+                    }
+                }
+            }
+        } else if (mTreeUri != null && "file".equals(mTreeUri.getScheme())) {
+            // Direct file system path (for default internal storage)
+            File outputDir = new File(mTreeUri.getPath(), "Photos");
+            if (!outputDir.exists()) {
+                if (!outputDir.mkdirs()) {
+                    Log.e(TAG, "copyPhotoToSafFolder: Failed to create default photo output directory: " + outputDir.getAbsolutePath());
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: Cannot create default photo output directory.", Toast.LENGTH_LONG).show());
+                    // Clean up temp file
+                    if (localFile.exists()) {
+                        if (localFile.delete()) {
+                            Log.d(TAG, "copyPhotoToSafFolder: Deleted temporary photo file after dir creation failure: " + localPhotoPath);
+                        } else {
+                            Log.w(TAG, "copyPhotoToSafFolder: Failed to delete temporary photo file after dir creation failure: " + localPhotoPath);
+                        }
+                    }
+                    return;
+                }
+            }
+
+            File destFile = new File(outputDir, name);
+            Log.d(TAG, "copyPhotoToSafFolder: Attempting to copy PHOTO '" + name + "' to local path: " + destFile.getAbsolutePath());
+
+            InputStream in = null;
+            OutputStream out = null;
+            try {
+                in = new FileInputStream(localFile);
+                out = new FileOutputStream(destFile); // Use FileOutputStream for direct file copy
+
                 byte[] buf = new byte[8192];
                 int len;
                 long totalCopied = 0;
                 while ((len = in.read(buf)) > 0) {
                     out.write(buf, 0, len);
-                    totalCopied +=len;
+                    totalCopied += len;
                 }
                 out.flush();
                 success = true;
-                Log.d(TAG, "copyPhotoToSafFolder: Successfully copied photo ("+totalCopied+" bytes) to " + destFile.getUri().toString());
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Photo saved to folder: " + name, Toast.LENGTH_LONG).show());
-            }
-        } catch (Exception ex) {
-            Log.e(TAG, "copyPhotoToSafFolder: Photo copy process failed", ex);
-            runOnUiThread(() -> Toast.makeText(MainActivity.this, "Photo copy to folder failed: " + ex.getMessage(), Toast.LENGTH_LONG).show());
-            success = false;
-        } finally {
-            if (!success && destFile != null && destFile.exists()) {
-                Log.w(TAG, "copyPhotoToSafFolder: Deleting incomplete/failed SAF destination photo: " + destFile.getUri().toString());
-                destFile.delete();
-            }
-            if (localFile.exists()) {
-                if (localFile.delete()) {
-                    Log.d(TAG, "copyPhotoToSafFolder: Deleted temporary photo file: " + localPhotoPath);
-                } else {
-                    Log.w(TAG, "copyPhotoToSafFolder: Failed to delete temporary photo file: " + localPhotoPath);
+                Log.d(TAG, "copyPhotoToSafFolder: Successfully copied " + totalCopied + " bytes (photo) to " + destFile.getAbsolutePath());
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Photo saved: " + name, Toast.LENGTH_LONG).show());
+            } catch (Exception ex) {
+                Log.e(TAG, "copyPhotoToSafFolder: Photo direct file copy process failed", ex);
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Photo copy to default folder failed: " + ex.getMessage(), Toast.LENGTH_LONG).show());
+                success = false;
+            } finally {
+                try {
+                    if (in != null) in.close();
+                    if (out != null) out.close();
+                } catch (Exception e) {
+                    Log.e(TAG, "copyPhotoToSafFolder: Error closing streams for direct photo copy", e);
                 }
+                if (!success && destFile.exists()) {
+                    Log.w(TAG, "copyPhotoToSafFolder: Deleting incomplete/failed direct destination photo file: " + destFile.getAbsolutePath());
+                    destFile.delete();
+                }
+                // Always delete the temporary local file
+                if (localFile.exists()) {
+                    if (localFile.delete()) {
+                        Log.d(TAG, "copyPhotoToSafFolder: Deleted temporary photo file: " + localPhotoPath);
+                    } else {
+                        Log.w(TAG, "copyPhotoToSafFolder: Failed to delete temporary photo file: " + localPhotoPath);
+                    }
+                }
+            }
+        } else {
+            Log.e(TAG, "copyPhotoToSafFolder: No valid URI scheme (neither content:// nor file://) or mTreeUri is null. Cannot copy photo.");
+            runOnUiThread(() -> Toast.makeText(MainActivity.this, "Error: No valid output folder configured for photo.", Toast.LENGTH_LONG).show());
+            // If no valid URI, the temp file should probably be kept or deleted based on your policy.
+            // For now, let's just log and leave it.
+            if (localFile.exists()) {
+                Log.w(TAG, "copyPhotoToSafFolder: Retaining temporary photo file as no valid output path was found: " + localPhotoPath);
             }
         }
     }

@@ -49,3 +49,21 @@ This project is based on the [UVCCamera library](https://github.com/saki4510t/UV
 ## License
 
 MIT License 
+
+## Building the apk file
+Navigate to the root directory of your Android project (the folder containing gradlew and settings.gradle).
+1. cd /path/to/your/project
+2. Clean the project (optional but recommended)
+   - ./gradlew clean
+3. Build the APK
+    - ./gradlew assembleDebug
+    This will generate a debug APK.
+    If you want a release APK, use:
+    - ./gradlew assembleRelease
+    Note: For release builds, you'll need to have signing configs set up in your build.gradle.
+   
+4. APK Output Location
+    After build completes, your APK will be located at:
+    app/build/outputs/apk/debug/app-debug.apk
+    or for release:
+    app/build/outputs/apk/release/app-release.apk
