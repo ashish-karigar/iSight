@@ -39,6 +39,16 @@
         android:layout_marginTop="12dp"
         android:visibility="gone" />
 
+    <EditText
+        android:id="@+id/verification_code_edittext"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter verification code"
+        android:inputType="number"
+        android:visibility="gone"
+        android:layout_marginTop="8dp" />
+
+
     <CheckBox
         android:id="@+id/signup_checkbox"
         android:text="New user? Sign up"

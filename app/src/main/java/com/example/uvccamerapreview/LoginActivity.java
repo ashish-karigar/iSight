@@ -33,9 +33,12 @@ public class LoginActivity extends AppCompatActivity {
 
     private static final int REQUEST_PERMISSIONS = 1001;
 
-    EditText usernameEditText, passwordEditText, confirmPasswordEditText;
+    EditText usernameEditText, passwordEditText, confirmPasswordEditText, verificationCodeEditText;
     CheckBox signupCheckbox;
     Button loginButton;
+
+    private boolean isVerificationStage = false;
+    private String pendingSignupUsername = "";
 
     // AWS Cognito user pool instance
     private CognitoUserPool userPool;
@@ -48,8 +51,17 @@ public class LoginActivity extends AppCompatActivity {
         usernameEditText = findViewById(R.id.username_edittext);
         passwordEditText = findViewById(R.id.password_edittext);
         confirmPasswordEditText = findViewById(R.id.confirm_password_edittext);
+        verificationCodeEditText = findViewById(R.id.verification_code_edittext);
         signupCheckbox = findViewById(R.id.signup_checkbox);
         loginButton = findViewById(R.id.login_button);
+
+
+        signupCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            confirmPasswordEditText.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            verificationCodeEditText.setVisibility(View.GONE); // Hide code input if switching back
+            loginButton.setText(isChecked ? "Sign Up" : "Sign In");
+            isVerificationStage = false; // Reset verification state
+        });
 
         // Initialize Cognito user pool
         userPool = new CognitoUserPool(
@@ -60,15 +72,15 @@ public class LoginActivity extends AppCompatActivity {
                 AwsCognitoConstants.AWS_REGION
         );
 
-        signupCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (isChecked) {
-                confirmPasswordEditText.setVisibility(View.VISIBLE);
-                loginButton.setText("Sign Up");
-            } else {
-                confirmPasswordEditText.setVisibility(View.GONE);
-                loginButton.setText("Sign In");
-            }
-        });
+//        signupCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+//            if (isChecked) {
+//                confirmPasswordEditText.setVisibility(View.VISIBLE);
+//                loginButton.setText("Sign Up");
+//            } else {
+//                confirmPasswordEditText.setVisibility(View.GONE);
+//                loginButton.setText("Sign In");
+//            }
+//        });
 
         // In onCreate() method
         loginButton.setOnClickListener(v -> {
@@ -76,29 +88,33 @@ public class LoginActivity extends AppCompatActivity {
             String password = passwordEditText.getText().toString();
             boolean isSignup = signupCheckbox.isChecked();
 
-            if (username.isEmpty() || password.isEmpty() || (isSignup && confirmPasswordEditText.getText().toString().isEmpty())) {
-                Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
+            if (isVerificationStage) {
+                // Verify user with code
+                String code = verificationCodeEditText.getText().toString().trim();
+                if (code.isEmpty()) {
+                    Toast.makeText(this, "Please enter verification code", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                confirmUser(pendingSignupUsername, code);
                 return;
             }
 
             if (isSignup) {
                 String confirmPassword = confirmPasswordEditText.getText().toString();
+                if (username.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
+                    Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 if (!password.equals(confirmPassword)) {
                     Toast.makeText(this, "Passwords do not match", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                // TODO: Handle sign-up logic here
-//                Toast.makeText(this, "Signed up successfully", Toast.LENGTH_SHORT).show();
-                // Call Cognito sign up
                 signUpUser(username, password);
             } else {
-                // Check hardcoded credentials
-//                if (!username.equals("test user") || !password.equals("password")) {
-//                    Toast.makeText(this, "Invalid username or password", Toast.LENGTH_SHORT).show();
-//                    return;
-//                }
-//                Toast.makeText(this, "Signed in successfully", Toast.LENGTH_SHORT).show();
-                // Perform sign-in with Cognito
+                if (username.isEmpty() || password.isEmpty()) {
+                    Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 signInUser(username, password);
             }
 
@@ -123,14 +139,16 @@ public class LoginActivity extends AppCompatActivity {
                         Toast.makeText(LoginActivity.this, "Signup successful. You can now sign in.", Toast.LENGTH_LONG).show();
                         signupCheckbox.setChecked(false); // Switch back to sign-in mode
                     } else {
-                        Toast.makeText(
-                                LoginActivity.this,
-                                "Signed up. Confirm code sent to: " +
-                                        (signUpResult.getCodeDeliveryDetails() != null
-                                                ? signUpResult.getCodeDeliveryDetails().getDestination()
-                                                : "your contact"),
-                                Toast.LENGTH_LONG
-                        ).show();
+                        // User needs to verify
+                        pendingSignupUsername = username;
+                        verificationCodeEditText.setVisibility(View.VISIBLE); // Show code input
+                        loginButton.setText("Verify");
+                        isVerificationStage = true;
+
+                        String destination = (signUpResult.getCodeDeliveryDetails() != null)
+                                ? signUpResult.getCodeDeliveryDetails().getDestination()
+                                : "your contact";
+                        Toast.makeText(LoginActivity.this, "Signed up. Confirm code sent to: " + destination, Toast.LENGTH_LONG).show();
                     }
                 });
             }
@@ -141,6 +159,27 @@ public class LoginActivity extends AppCompatActivity {
                     String msg = exception.getMessage() != null ? exception.getMessage() : "Signup failed";
                     Toast.makeText(LoginActivity.this, "Signup failed: " + msg, Toast.LENGTH_LONG).show();
                 });
+            }
+        });
+    }
+
+    private void confirmUser(String username, String code) {
+        CognitoUser user = userPool.getUser(username);
+        user.confirmSignUpInBackground(code, false, new GenericHandler() {
+            @Override
+            public void onSuccess() {
+                runOnUiThread(() -> {
+                    Toast.makeText(LoginActivity.this, "Account confirmed. Please log in.", Toast.LENGTH_SHORT).show();
+                    verificationCodeEditText.setVisibility(View.GONE);
+                    isVerificationStage = false;
+                    loginButton.setText("Sign In");
+                    signupCheckbox.setChecked(false);
+                });
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                runOnUiThread(() -> Toast.makeText(LoginActivity.this, "Verification failed: " + exception.getMessage(), Toast.LENGTH_LONG).show());
             }
         });
     }
