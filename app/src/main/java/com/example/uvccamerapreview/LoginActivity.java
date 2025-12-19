@@ -186,11 +186,13 @@ public class LoginActivity extends AppCompatActivity {
 
     private void signInUser(String username, String password) {
         CognitoUser user = userPool.getUser(username);
-        user.signOut();
+//            NEW CHANGES HERE 1ST DEC
+//        user.signOut();
 
         AuthenticationHandler authHandler = new AuthenticationHandler() {
+//            NEW CHANGES HERE 1ST DEC
             @Override
-            public void onSuccess(com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserSession userSession, com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoDevice newDevice) {
+            public void onSuccess(com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserSession userSession, com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoDevice newDevice){
                 // Authentication successful
                 runOnUiThread(() -> {
                     Toast.makeText(LoginActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
@@ -200,6 +202,17 @@ public class LoginActivity extends AppCompatActivity {
                     }
                 });
             }
+//            @Override
+//            public void onSuccess(com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserSession userSession, com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoDevice newDevice) {
+//                // Authentication successful
+//                runOnUiThread(() -> {
+//                    Toast.makeText(LoginActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
+//                    // After successful auth, proceed to permission check / next screen
+//                    if (checkAndRequestPermissions()) {
+//                        navigateToWelcomeScreen();
+//                    }
+//                });
+//            }
 
             @Override
             public void getAuthenticationDetails(
@@ -293,5 +306,12 @@ public class LoginActivity extends AppCompatActivity {
                 Toast.makeText(this, "Camera and Audio permissions are required to use the camera.", Toast.LENGTH_LONG).show();
             }
         }
+    }
+
+    private void setLoggedIn(boolean loggedIn) {
+        getSharedPreferences("auth_prefs", MODE_PRIVATE)
+                .edit()
+                .putBoolean("is_logged_in", loggedIn)
+                .apply();
     }
 }

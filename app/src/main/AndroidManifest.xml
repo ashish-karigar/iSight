@@ -11,12 +11,14 @@
     <uses-sdk android:minSdkVersion="21" />
     
     <!-- Audio and Camera permissions -->
+    <uses-permission android:name="android.permission.USB_PERMISSION" />
     <uses-permission android:name="android.permission.USB_PERMISSION" tools:ignore="ProtectedPermissions"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 
     <application
         android:allowBackup="true"
@@ -28,6 +30,19 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.UVCCameraPreview"
         tools:targetApi="31">
+
+<!--        //            NEW CHANGES HERE 1ST DEC-->
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.UVCCameraPreview">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+<!--        //            NEW CHANGES HERE 1ST DEC-->
+
         <activity
             android:name=".MainActivity"
             android:screenOrientation="landscape"
@@ -41,18 +56,19 @@
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.UVCCameraPreview">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            
-            <!-- USB device filter for UVC camera -->
-            <intent-filter>
-                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
-            </intent-filter>
-            <meta-data
-                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
-                android:resource="@xml/device_filter" />
+<!--            //            NEW CHANGES HERE 1ST DEC-->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.MAIN" />-->
+<!--                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--            </intent-filter>-->
+<!--            -->
+<!--            &lt;!&ndash; USB device filter for UVC camera &ndash;&gt;-->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />-->
+<!--            </intent-filter>-->
+<!--            <meta-data-->
+<!--                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"-->
+<!--                android:resource="@xml/device_filter" />-->
         </activity>
     </application>
 
