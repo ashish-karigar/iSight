@@ -16,7 +16,7 @@
         android:layout_marginBottom="12dp"/>
 
     <TextView
-        android:text="Welcome to My Lens"
+        android:text="Welcome to i-Sight"
         android:textSize="24sp"
         android:textStyle="bold"
         android:layout_marginBottom="24dp"
