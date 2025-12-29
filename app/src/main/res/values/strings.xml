@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">My Lens</string>
+    <string name="app_name">i-Sight</string>
     <string name="status_no_device">No Camera Detected</string>
     <string name="status_device_connected">Camera connected</string>
     <string name="status_device_error">Error connecting to device</string>
@@ -7,5 +7,5 @@
     <string name="open_camera_preview">Open Camera Preview</string>
     <string name="select_storage_location">Select Storage Location</string>
     <string name="tutorial">Tutorial</string>
-    <string name="welcome_to_my_lens">Welcome to My Lens</string>
+    <string name="welcome_to_my_lens">Welcome to i-Sight</string>
 </resources>
