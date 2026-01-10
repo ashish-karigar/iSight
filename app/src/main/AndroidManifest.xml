@@ -31,7 +31,6 @@
         android:theme="@style/Theme.UVCCameraPreview"
         tools:targetApi="31">
 
-<!--        //            NEW CHANGES HERE 1ST DEC-->
         <activity
             android:name=".SplashActivity"
             android:exported="true"
@@ -41,11 +40,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-<!--        //            NEW CHANGES HERE 1ST DEC-->
 
         <activity
             android:name=".MainActivity"
-            android:screenOrientation="landscape"
+            android:exported="true"
+            android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize"
             />
         <activity
