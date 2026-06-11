@@ -1,4 +1,4 @@
-package com.example.uvccamerapreview;
+package com.isightmed.gmvg.camera;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -10,7 +10,7 @@ import android.util.Log;
 import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import com.example.uvccamerapreview.databinding.ActivityWelcomeBinding;
+import com.isightmed.gmvg.camera.databinding.ActivityWelcomeBinding;
 import java.io.File;
 
 public class WelcomeActivity extends AppCompatActivity {
@@ -47,10 +47,6 @@ public class WelcomeActivity extends AppCompatActivity {
 
         // ---------------------------
 
-        binding.tutorialButton.setOnClickListener(v -> {
-            // TODO: show tutorial
-        });
-
         binding.selectStorageButton.setOnClickListener(v -> {
             Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
             String uriString = prefs.getString("user_folder_uri", null);
@@ -59,6 +55,11 @@ public class WelcomeActivity extends AppCompatActivity {
                         Uri.parse(uriString));
             }
             startActivityForResult(i, REQUEST_CODE_PICK_DIR);
+        });
+
+        binding.privacyPolicyButton.setOnClickListener(v -> {
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.privacy_policy_url)));
+            startActivity(i);
         });
 
         binding.previewButton.setOnClickListener(v -> {

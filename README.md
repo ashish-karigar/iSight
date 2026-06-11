@@ -72,6 +72,3 @@ Navigate to the root directory of your Android project (the folder containing gr
 - adb devices: lists all the connected devices
 - adb pair [ip-(select pair device with pairing code under developer options in android settings)]: pairs ide with android device
 - adb connect [IP address & Port]: Connects both the devices 
-
-## Login
-1. axk6361@psu.edu: Qwerty1@2

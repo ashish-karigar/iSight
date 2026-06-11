@@ -1,4 +1,4 @@
-package com.example.uvccamerapreview;
+package com.isightmed.gmvg.camera;
 
 import android.Manifest;
 import android.content.Intent;
@@ -366,6 +366,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
                 CameraRequest req = new CameraRequest.Builder()
                         .setPreviewWidth(DEFAULT_WIDTH)
                         .setPreviewHeight(DEFAULT_HEIGHT)
+                        .setAudioSource(CameraRequest.AudioSource.SOURCE_SYS_MIC)
                         .create();
                 Log.d(TAG, "Opening camera with request: " + DEFAULT_WIDTH + "x" + DEFAULT_HEIGHT);
                 mCamera.openCamera(mCameraView, req);

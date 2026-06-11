@@ -1,4 +1,4 @@
-package com.example.cam1.ui.theme
+package com.isightmed.gmvg.camera.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

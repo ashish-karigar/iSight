@@ -1,4 +1,4 @@
-package com.example.cam1
+package com.isightmed.gmvg.camera
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.example.cam1", appContext.packageName)
+        assertEquals("com.isightmed.gmvg.camera", appContext.packageName)
     }
 }

@@ -1,4 +1,4 @@
-package com.example.cam1
+package com.isightmed.gmvg.camera
 
 import org.junit.Test
 

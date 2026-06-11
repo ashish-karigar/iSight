@@ -1,11 +1,12 @@
 <resources>
-    <string name="app_name">i-Sight Local</string>
+    <string name="app_name">i-Sight Med</string>
     <string name="status_no_device">No Camera Detected</string>
     <string name="status_device_connected">Camera connected</string>
     <string name="status_device_error">Error connecting to device</string>
     <string name="permission_required">USB permission required</string>
     <string name="open_camera_preview">Open Camera Preview</string>
     <string name="select_storage_location">Select Storage Location</string>
-    <string name="tutorial">Tutorial</string>
-    <string name="welcome_to_my_lens">Welcome to i-Sight Local</string>
+    <string name="welcome_to_my_lens">Welcome to i-Sight Med</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="privacy_policy_url">https://ashish-karigar.github.io/isight-privacy-policy/</string>
 </resources>
