@@ -240,8 +240,7 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
         if (arePermissionsGranted()) {
             initializeCamera();
         } else {
-            Toast.makeText(this, "Permissions are required. Please restart and grant permissions.", Toast.LENGTH_LONG).show();
-            finish(); // Close activity if permissions are missing.
+            requestMissingPermissions();
         }
     }
 
@@ -296,29 +295,39 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
         return camera && audio;
     }
 
-//    @Override
-//    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-//                                           @NonNull int[] grantResults) {
-//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-//        if (requestCode == REQUEST_PERMISSIONS) {
-//            boolean allGranted = true;
-//            for (int i = 0; i < grantResults.length; i++) {
-//                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
-//                    allGranted = false;
-//                    Log.w(TAG, "Permission denied: " + permissions[i]);
-//                } else {
-//                    Log.d(TAG, "Permission granted: " + permissions[i]);
-//                }
-//            }
-//            if (allGranted) {
-//                Log.d(TAG, "All permissions granted by user.");
-//                initializeCamera();
-//            } else {
-//                Toast.makeText(this, "Permissions are required to use the camera.", Toast.LENGTH_LONG).show();
-//                Log.e(TAG, "Not all permissions were granted.");
-//            }
-//        }
-//    }
+    private void requestMissingPermissions() {
+        List<String> missingPermissions = new ArrayList<>();
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            missingPermissions.add(Manifest.permission.CAMERA);
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            missingPermissions.add(Manifest.permission.RECORD_AUDIO);
+        }
+
+        ActivityCompat.requestPermissions(
+                this,
+                missingPermissions.toArray(new String[0]),
+                REQUEST_PERMISSIONS
+        );
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_PERMISSIONS) {
+            if (arePermissionsGranted()) {
+                Log.d(TAG, "All runtime permissions granted by user.");
+                initializeCamera();
+            } else {
+                Toast.makeText(this, "Camera and microphone permissions are required.", Toast.LENGTH_LONG).show();
+                Log.e(TAG, "Not all runtime permissions were granted.");
+                finish();
+            }
+        }
+    }
 
     private void initializeCamera() {
         Log.d(TAG, "Initializing camera...");

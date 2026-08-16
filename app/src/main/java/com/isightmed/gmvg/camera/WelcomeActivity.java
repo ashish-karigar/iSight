@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -16,7 +17,9 @@ import java.io.File;
 public class WelcomeActivity extends AppCompatActivity {
     private ActivityWelcomeBinding binding;
     private static final int REQUEST_CODE_PICK_DIR = 2001;
+    private static final int CREATOR_MARK_TAP_COUNT = 7;
     private SharedPreferences prefs;
+    private int logoTapCount = 0;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -47,6 +50,15 @@ public class WelcomeActivity extends AppCompatActivity {
 
         // ---------------------------
 
+        View creatorMarkTarget = binding.imgLogo != null ? binding.imgLogo : binding.getRoot();
+        creatorMarkTarget.setOnClickListener(v -> {
+            logoTapCount++;
+            if (logoTapCount >= CREATOR_MARK_TAP_COUNT) {
+                logoTapCount = 0;
+                Toast.makeText(this, R.string.creator_mark, Toast.LENGTH_LONG).show();
+            }
+        });
+
         binding.selectStorageButton.setOnClickListener(v -> {
             Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
             String uriString = prefs.getString("user_folder_uri", null);
@@ -59,6 +71,11 @@ public class WelcomeActivity extends AppCompatActivity {
 
         binding.privacyPolicyButton.setOnClickListener(v -> {
             Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.privacy_policy_url)));
+            startActivity(i);
+        });
+
+        binding.visitWebsiteButton.setOnClickListener(v -> {
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.website_url)));
             startActivity(i);
         });
 

@@ -4,9 +4,15 @@
     <string name="status_device_connected">Camera connected</string>
     <string name="status_device_error">Error connecting to device</string>
     <string name="permission_required">USB permission required</string>
-    <string name="open_camera_preview">Open Camera Preview</string>
+    <string name="open_camera_preview">Open Camera Live View</string>
+    <string name="open_camera_preview_land">Open Camera\nLive View</string>
     <string name="select_storage_location">Select Storage Location</string>
     <string name="welcome_to_my_lens">Welcome to i-Sight Med</string>
     <string name="privacy_policy">Privacy Policy</string>
-    <string name="privacy_policy_url">https://ashish-karigar.github.io/isight-privacy-policy/</string>
+    <string name="privacy_policy_url">https://globalmedventuregroup.com/pages/i-sight-med-privacy-policy</string>
+    <string name="creator_mark">Created by Ashish Karigar</string>
+    <string name="visit_website">Visit Website</string>
+    <string name="website_url">https://globalmedventuregroup.com/</string>
+    <string name="visit_website_land">Visit\nWebsite</string>
+    <string name="privacy_policy_land">Privacy\nPolicy</string>
 </resources>

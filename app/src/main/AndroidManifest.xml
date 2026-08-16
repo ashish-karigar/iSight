@@ -26,12 +26,17 @@
         android:theme="@style/Theme.UVCCameraPreview"
         tools:targetApi="31">
 
+        <meta-data
+            android:name="com.isightmed.creator"
+            android:value="Created by Ashish Karigar" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize"
-            />
+            tools:ignore="LockedOrientationActivity"/>
+
         <activity
             android:name=".WelcomeActivity"
             android:exported="true"

@@ -24,16 +24,6 @@
         android:layout_height="wrap_content"/>
 
     <Button
-        android:id="@+id/select_storage_button"
-        android:text="@string/select_storage_location"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:background="@drawable/rounded_button"
-        android:textColor="#000"
-        android:textAllCaps="false" />
-
-    <Button
         android:id="@+id/preview_button"
         android:text="@string/open_camera_preview"
         android:layout_width="match_parent"
@@ -42,6 +32,26 @@
         android:background="@drawable/rounded_button"
         android:textColor="#000"
         android:textAllCaps="false"/>
+
+    <Button
+        android:id="@+id/visit_website_button"
+        android:text="@string/visit_website"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/rounded_button"
+        android:textColor="#000"
+        android:textAllCaps="false"/>
+
+    <Button
+        android:id="@+id/select_storage_button"
+        android:text="@string/select_storage_location"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/rounded_button"
+        android:textColor="#000"
+        android:textAllCaps="false" />
 
     <Button
         android:id="@+id/privacy_policy_button"
