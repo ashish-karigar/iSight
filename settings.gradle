@@ -15,7 +15,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "UVCCameraPreview"
+rootProject.name = "iSight"
 include ':app'
 include ':libuvc'
 include ':libnative'

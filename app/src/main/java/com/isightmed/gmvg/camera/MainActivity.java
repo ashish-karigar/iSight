@@ -4,7 +4,6 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
 import android.hardware.usb.UsbDevice;
 import android.net.Uri;
 import android.os.Bundle;
@@ -18,7 +17,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.RelativeLayout;
 import android.view.Gravity;
-import android.view.Surface;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -172,7 +170,6 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
 
 
         mCameraViewContainer = findViewById(R.id.camera_preview);
-        applyLandscapeRotationToPreview();
         mStatusTextView = findViewById(R.id.status_text);
         mCaptureButton = findViewById(R.id.capture_button); // <<<< UNCOMMENTED / ENSURED
         mRecordButton = findViewById(R.id.record_button);
@@ -191,7 +188,6 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
         mCameraView.setLayoutParams(params);
 
         mCameraViewContainer.addView(mCameraView);
-//        mCameraView.setRotation(90); // Rotates the view 90 degrees clockwise
 
         if (mCaptureButton != null) { // <<<< UNCOMMENTED / ENSURED
             mCaptureButton.setOnClickListener(v -> {
@@ -853,25 +849,6 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
         }
     }
 
-    private void applyLandscapeRotationToPreview() {
-        if (mCameraView == null) return;
-
-        int rotation = getWindowManager().getDefaultDisplay().getRotation();
-
-        // Activity will already be landscape or reverse-landscape.
-        // Rotate the TextureView only if needed.
-        if (rotation == Surface.ROTATION_90) {
-            // Normal landscape
-            mCameraView.setRotation(0f);
-        } else if (rotation == Surface.ROTATION_270) {
-            // Reverse landscape
-            mCameraView.setRotation(180f);
-        } else {
-            // Fallback (shouldn’t happen if sensorLandscape is enforced)
-            mCameraView.setRotation(0f);
-        }
-    }
-
     private void capturePhoto() {
         if (mCamera == null) {
             Toast.makeText(this, "Camera not ready for photo.", Toast.LENGTH_SHORT).show();
@@ -978,7 +955,6 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
                     if (mStatusTextView != null) mStatusTextView.setText(R.string.status_device_connected);
                     if (mCaptureButton != null) mCaptureButton.setEnabled(true); // <<<< RESTORED
                     if (mRecordButton != null) mRecordButton.setEnabled(true);
-                    applyLandscapeRotationToPreview();
                     break;
                 case CLOSED:
                 case ERROR:
@@ -1029,14 +1005,6 @@ public class MainActivity extends AppCompatActivity implements ICameraStateCallB
             mCameraClient = null;
         }
         super.onDestroy();
-    }
-
-    @Override
-    public void onConfigurationChanged(@NonNull Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-
-        // Keep the preview correctly oriented when the user flips the phone
-        applyLandscapeRotationToPreview();
     }
 
     private void closeCamera() {
