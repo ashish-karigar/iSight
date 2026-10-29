@@ -3,59 +3,58 @@ import AVFoundation
 import UniformTypeIdentifiers
 import QuickLook
 
+private struct AndroidButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.body).multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity, minHeight: 48)
+            .padding(.horizontal, 12)
+            .foregroundStyle(.black)
+            .background(Color(red: 176/255, green: 157/255, blue: 215/255), in: RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(red: 55/255, green: 0, blue: 179/255), lineWidth: 2))
+            .opacity(configuration.isPressed ? 0.7 : 1)
+    }
+}
+
 struct HomeView: View {
     @EnvironmentObject private var library: CaptureLibrary
     @State private var live = false
     @State private var folderPicker = false
-    @State private var captures = false
     @State private var creator = false
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    Image("BrandLogo")
-                        .resizable().scaledToFit().frame(width: 132, height: 132)
-                        .onTapGesture(count: 7) { creator = true }
-                        .accessibilityLabel("i-Sight Med logo")
-                    VStack(spacing: 8) {
-                        Text("Welcome to i-Sight Med").font(.largeTitle.bold()).multilineTextAlignment(.center)
-                        Text("A closer look. A clearer view.").foregroundStyle(.secondary)
-                    }
-                    Button { live = true } label: {
-                        Label("Open Camera Live View", systemImage: "viewfinder")
-                            .frame(maxWidth: .infinity).padding(8)
-                    }.buttonStyle(.borderedProminent).controlSize(.large)
-                    VStack(spacing: 0) {
-                        Button { captures = true } label: { menuRow("Captures", icon: "photo.on.rectangle") }
-                        Divider()
-                        Button { folderPicker = true } label: { menuRow("Select Storage Location", icon: "folder") }
-                        Divider()
-                        Link(destination: URL(string: "https://globalmedventuregroup.com/")!) {
-                            menuRow("Visit Website", icon: "globe")
-                        }
-                        Divider()
-                        Link(destination: URL(string: "https://globalmedventuregroup.com/pages/i-sight-med-privacy-policy")!) {
-                            menuRow("Privacy Policy", icon: "hand.raised")
+            GeometryReader { geometry in
+                ScrollView {
+                    Group {
+                        if geometry.size.width > geometry.size.height {
+                            HStack(spacing: 32) {
+                                welcome.frame(maxWidth: .infinity)
+                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 18) {
+                                    actions
+                                }.frame(maxWidth: .infinity)
+                            }
+                        } else {
+                            VStack(spacing: 32) {
+                                welcome
+                                VStack(spacing: 18) { actions }
+                            }.frame(maxWidth: 520)
                         }
                     }
-                    .background(.background, in: RoundedRectangle(cornerRadius: 18))
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label("Saving to \(library.folderName)", systemImage: "externaldrive")
-                            .font(.footnote).foregroundStyle(.secondary)
-                        Button("Use app storage only") { library.useLocalFolder() }.font(.footnote)
-                        Text("Compatible USB cameras are available on supported iPads. On iPhone, use a built-in camera. Captures stay on your device unless you choose a Files folder or share them.")
-                            .font(.footnote).foregroundStyle(.secondary)
-                    }
-                }.padding(28).frame(maxWidth: 560).frame(maxWidth: .infinity)
+                    .padding(24)
+                    .frame(maxWidth: .infinity, minHeight: geometry.size.height)
+                }
             }
-            .background(Color(uiColor: .systemGroupedBackground))
+            .background(Color(uiColor: .systemBackground))
             .navigationTitle("i-Sight Med").navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color(red: 187/255, green: 134/255, blue: 252/255), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .fullScreenCover(isPresented: $live) { LiveCameraView() }
-            .sheet(isPresented: $captures) { CapturesView() }
             .fileImporter(isPresented: $folderPicker, allowedContentTypes: [.folder]) { result in
                 switch result {
-                case .success(let url): library.selectFolder(url)
+                case .success(let url):
+                    library.selectFolder(url)
+                    if library.message == nil { library.message = "Storage location: \(library.folderName)" }
                 case .failure(let error): library.message = error.localizedDescription
                 }
             }
@@ -67,12 +66,23 @@ struct HomeView: View {
         }
     }
 
-    private func menuRow(_ title: String, icon: String) -> some View {
-        HStack {
-            Label(title, systemImage: icon)
-            Spacer()
-            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)
-        }.padding(18).contentShape(Rectangle())
+    private var welcome: some View {
+        VStack(spacing: 12) {
+            Image("BrandLogo").resizable().scaledToFit().frame(width: 120, height: 120)
+                .onTapGesture(count: 7) { creator = true }
+                .accessibilityLabel("i-Sight Med logo")
+            Text("Welcome to i-Sight Med").font(.system(size: 24, weight: .bold))
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    @ViewBuilder private var actions: some View {
+        Button("Open Camera Live View") { live = true }.buttonStyle(AndroidButtonStyle())
+        Link("Visit Website", destination: URL(string: "https://globalmedventuregroup.com/")!)
+            .buttonStyle(AndroidButtonStyle())
+        Button("Select Storage Location") { folderPicker = true }.buttonStyle(AndroidButtonStyle())
+        Link("Privacy Policy", destination: URL(string: "https://globalmedventuregroup.com/pages/i-sight-med-privacy-policy")!)
+            .buttonStyle(AndroidButtonStyle())
     }
 }
 
@@ -85,55 +95,68 @@ struct LiveCameraView: View {
     @State private var saving = 0
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                Color.black.ignoresSafeArea()
-                CameraPreview(session: camera.session, onRotation: camera.setRotation).ignoresSafeArea()
-                if !camera.ready {
-                    VStack(spacing: 16) {
-                        Image(systemName: "video.slash").font(.system(size: 42))
-                        Text(camera.status).multilineTextAlignment(.center).frame(maxWidth: 380)
-                        if camera.permissionDenied {
-                            Button("Open Settings") {
-                                UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!)
-                            }.buttonStyle(.borderedProminent)
-                        }
-                    }.padding(24).background(.black.opacity(0.8), in: RoundedRectangle(cornerRadius: 18))
-                }
-                VStack {
-                    HStack {
-                        Button { camera.stop(); dismiss() } label: { Label("Menu", systemImage: "chevron.left") }
-                            .disabled(camera.recording || camera.busy || saving > 0)
-                        Spacer()
-                        if camera.recording {
-                            Label("REC", systemImage: "record.circle.fill").foregroundStyle(.red).bold()
-                        }
-                        Menu {
-                            ForEach(camera.cameras) { choice in
-                                Button {
-                                    camera.select(choice.id)
-                                } label: {
-                                    Label(choice.name, systemImage: choice.external ? "cable.connector" : "camera")
-                                }
-                            }
-                            Button("Refresh cameras", systemImage: "arrow.clockwise") { camera.refreshDevices() }
-                        } label: { Label("Camera", systemImage: "camera.rotate") }
-                        .disabled(camera.recording || camera.busy)
-                    }.padding().background(.black.opacity(0.65))
-                    Spacer()
-                    HStack(alignment: .bottom) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(camera.status).font(.footnote)
-                            Text(saving > 0 ? "Saving capture…" : "Photos are snapshots of the live video feed.")
-                                .font(.caption).foregroundStyle(.white.opacity(0.7))
-                        }
-                        Spacer()
-                        if geometry.size.width > geometry.size.height { controls }
-                    }.padding().background(.black.opacity(0.65))
-                    if geometry.size.width <= geometry.size.height { controls.padding().background(.black.opacity(0.65)) }
-                }.foregroundStyle(.white)
+        ZStack {
+            Color.black.ignoresSafeArea()
+            CameraPreview(session: camera.session, deviceID: camera.selectedID, onRotation: camera.setRotation)
+                .ignoresSafeArea()
+            if !camera.ready {
+                VStack(spacing: 16) {
+                    Image(systemName: "video.slash").font(.system(size: 32))
+                    Text(camera.status).multilineTextAlignment(.center).frame(maxWidth: 320)
+                    if camera.permissionDenied {
+                        Button("Open Settings") { UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!) }
+                            .buttonStyle(.borderedProminent)
+                    }
+                }.padding(24).background(.black.opacity(0.8), in: RoundedRectangle(cornerRadius: 18))
             }
+            HStack(spacing: 16) {
+                VStack(alignment: .leading) {
+                    Menu {
+                        Button("Back to Menu") { camera.stop(); dismiss() }
+                            .disabled(camera.recording || camera.busy || saving > 0)
+                        Button("Captures") { captures = true }.disabled(camera.recording || camera.busy)
+                        Section("Camera") {
+                            ForEach(camera.cameras) { choice in
+                                Button(choice.name) { camera.select(choice.id) }
+                                    .disabled(camera.recording || camera.busy)
+                            }
+                            Button("Refresh cameras") { camera.refreshDevices() }
+                                .disabled(camera.recording || camera.busy)
+                        }
+                        Toggle("Microphone audio", isOn: $camera.microphoneEnabled)
+                            .disabled(camera.recording || camera.busy)
+                    } label: {
+                        Text("Menu").padding(.horizontal, 16).padding(.vertical, 10)
+                            .background(.white.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
+                    }.accessibilityIdentifier("live-menu")
+                    Spacer()
+                    if camera.recording {
+                        Label("REC", systemImage: "record.circle.fill").foregroundStyle(.red).bold()
+                    }
+                    Text(saving > 0 ? "Saving…" : camera.status).font(.footnote)
+                        .padding(8).background(.black.opacity(0.5))
+                }
+                Spacer()
+                VStack(spacing: 48) {
+                    Button { Task { await camera.toggleRecording() } } label: {
+                        Image(systemName: camera.recording ? "stop.fill" : "play.fill")
+                            .foregroundStyle(camera.recording ? .red : .black)
+                            .font(.title2).frame(width: 56, height: 56)
+                            .background(.white.opacity(0.5), in: Circle())
+                    }
+                    .accessibilityLabel(camera.recording ? "Stop recording" : "Start recording")
+                    .accessibilityIdentifier("record-video")
+                    .disabled((!camera.ready && !camera.recording) || camera.busy)
+                    Button { camera.capturePhoto() } label: {
+                        Image(systemName: "camera.fill").font(.title2).foregroundStyle(.black)
+                            .frame(width: 56, height: 56).background(.white.opacity(0.5), in: Circle())
+                    }.accessibilityLabel("Take photo").accessibilityIdentifier("capture-photo")
+                        .disabled(!camera.ready || camera.busy || camera.recording)
+                }.padding(.horizontal, 8)
+            }.padding(16).foregroundStyle(.white)
         }
+        .statusBarHidden()
+        .onAppear { AppOrientation.setLiveView(true) }
         .task {
             camera.onCapture = { url in
                 saving += 1
@@ -141,7 +164,7 @@ struct LiveCameraView: View {
             }
             await camera.start()
         }
-        .onDisappear { camera.stop() }
+        .onDisappear { camera.stop(); AppOrientation.setLiveView(false) }
         .onChange(of: phase) { _, value in
             if value == .background { camera.stop() }
             else if value == .active { Task { await camera.start() } }
@@ -156,49 +179,46 @@ struct LiveCameraView: View {
             Button("OK") { library.message = nil }
         } message: { Text(library.message ?? "") }
     }
-
-    private var controls: some View {
-        HStack(spacing: 24) {
-            Button { captures = true } label: { Image(systemName: "photo.on.rectangle").font(.title2) }
-                .accessibilityLabel("View saved captures").disabled(camera.recording || camera.busy)
-            Button { camera.capturePhoto() } label: {
-                Image(systemName: "camera.fill").font(.title2).frame(width: 58, height: 58)
-                    .background(.white, in: Circle()).foregroundStyle(.black)
-            }.accessibilityLabel("Take photo").disabled(!camera.ready || camera.busy || camera.recording)
-            Button { Task { await camera.toggleRecording() } } label: {
-                Image(systemName: camera.recording ? "stop.fill" : "record.circle.fill")
-                    .font(.system(size: 44)).foregroundStyle(.red).frame(width: 58, height: 58)
-            }.accessibilityLabel(camera.recording ? "Stop recording" : "Start recording")
-                .disabled((!camera.ready && !camera.recording) || camera.busy)
-            Toggle(isOn: $camera.microphoneEnabled) {
-                Image(systemName: camera.microphoneEnabled ? "mic.fill" : "mic.slash.fill")
-            }
-                .toggleStyle(.button).accessibilityLabel("Record microphone audio")
-                .fixedSize().disabled(camera.recording || camera.busy)
-        }
-    }
 }
 
 private final class PreviewSurface: UIView {
     var onRotation: ((CGFloat) -> Void)?
-    private var previousAngle: CGFloat?
+    private var deviceID = ""
+    private var coordinator: AVCaptureDevice.RotationCoordinator?
+    private var observations: [NSKeyValueObservation] = []
+    private var previousCaptureAngle: CGFloat?
     override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
     var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
 
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        guard let connection = previewLayer.connection else { return }
-        let angle: CGFloat
-        switch window?.windowScene?.interfaceOrientation {
-        case .landscapeLeft: angle = 0
-        case .landscapeRight: angle = 180
-        case .portraitUpsideDown: angle = 270
-        default: angle = 90
-        }
-        if connection.isVideoRotationAngleSupported(angle) { connection.videoRotationAngle = angle }
-        if previousAngle != angle {
-            previousAngle = angle
-            onRotation?(angle)
+    func selectDevice(_ id: String) {
+        guard id != deviceID else { return }
+        deviceID = id
+        observations.removeAll()
+        coordinator = nil
+        previousCaptureAngle = nil
+        guard let device = AVCaptureDevice(uniqueID: id) else { return }
+        let rotation = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: previewLayer)
+        coordinator = rotation
+        observations = [
+            rotation.observe(\.videoRotationAngleForHorizonLevelPreview, options: [.initial, .new]) { [weak self] _, _ in
+                Task { @MainActor in self?.applyRotation() }
+            },
+            rotation.observe(\.videoRotationAngleForHorizonLevelCapture, options: [.initial, .new]) { [weak self] _, _ in
+                Task { @MainActor in self?.applyRotation() }
+            }
+        ]
+    }
+
+    override func layoutSubviews() { super.layoutSubviews(); applyRotation() }
+
+    private func applyRotation() {
+        guard let coordinator, let connection = previewLayer.connection else { return }
+        let previewAngle = coordinator.videoRotationAngleForHorizonLevelPreview
+        if connection.isVideoRotationAngleSupported(previewAngle) { connection.videoRotationAngle = previewAngle }
+        let captureAngle = coordinator.videoRotationAngleForHorizonLevelCapture
+        if previousCaptureAngle != captureAngle {
+            previousCaptureAngle = captureAngle
+            onRotation?(captureAngle)
         }
         if connection.isVideoMirroringSupported {
             connection.automaticallyAdjustsVideoMirroring = false
@@ -209,15 +229,20 @@ private final class PreviewSurface: UIView {
 
 private struct CameraPreview: UIViewRepresentable {
     let session: AVCaptureSession
+    let deviceID: String
     let onRotation: (CGFloat) -> Void
     func makeUIView(context: Context) -> PreviewSurface {
         let view = PreviewSurface()
         view.previewLayer.session = session
         view.onRotation = onRotation
         view.previewLayer.videoGravity = .resizeAspect
+        view.selectDevice(deviceID)
         return view
     }
-    func updateUIView(_ uiView: PreviewSurface, context: Context) { uiView.setNeedsLayout() }
+    func updateUIView(_ view: PreviewSurface, context: Context) {
+        view.selectDevice(deviceID)
+        view.setNeedsLayout()
+    }
 }
 
 struct CapturesView: View {

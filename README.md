@@ -4,8 +4,8 @@ Native SwiftUI + AVFoundation counterpart to the Android app. Open `iSight.xcode
 
 ## Features
 
-- Welcome menu with the existing branding, website, privacy-policy link, and creator credit (tap the logo seven times).
-- Camera selection, live preview, JPEG snapshots of the video feed, and MOV recording with optional microphone audio (off by default).
+- Android-matched welcome menu with purple buttons, branding, website, privacy-policy link, and creator credit (tap the logo seven times). No footer copy below Privacy Policy.
+- Landscape-only Live View with fixed right-side record/photo controls, camera selection and captures in Menu, JPEG snapshots, and MOV recording with optional microphone audio (off by default).
 - Built-in cameras on iPhone/iPad; UVC external-camera discovery on supported iPads, preferring an external camera when first opened.
 - Local Photos/Videos folders, a captures list with Quick Look and sharing, and optional export to a folder selected in Files using a persisted security-scoped bookmark.
 - Camera/microphone permission handling, Settings shortcut, disconnect/interruption handling, and stopping capture on backgrounding.
@@ -18,7 +18,7 @@ References: [Apple external-camera documentation](https://developer.apple.com/do
 
 ## Storage and capture behavior
 
-Every completed capture is saved in the app's Documents/Captures/Photos or Videos directory. These originals are visible in Files under the app and in the Captures screen. Selecting another Files folder adds a copy there; failure leaves the local original available for sharing. Uninstalling the app removes its local files. Recordings are capped at one hour and stop when disk space is low. Photos are live-frame snapshots, not full-resolution still-camera captures. Video orientation is set before recording; hold the device in that orientation while recording.
+Every completed capture is saved in the app's Documents/Captures/Photos or Videos directory. These originals are visible in Files under the app and in the Captures screen. Selecting another Files folder adds a copy there; failure leaves the local original available for sharing. Uninstalling the app removes its local files. Recordings are capped at one hour and stop when disk space is low. Photos are live-frame snapshots, not full-resolution still-camera captures. Preview and capture orientation use AVCaptureDevice.RotationCoordinator rather than a manual left/right mapping. Movie orientation stays fixed while recording; preview rotation remains independent. Live View supports the two landscape orientations, matching Android sensorLandscape, and does not rearrange the controls when the device is held upright.
 
 Camera switching and leaving Live View are disabled during recording. Stop recording before returning to the menu. External-camera disconnects stop the session without silently switching to a built-in camera. Reconnect and select the camera again. Microphone permission is requested only when recording with audio enabled; denying it produces silent video. Simulator builds can verify UI and storage but cannot establish camera compatibility.
 
@@ -58,6 +58,8 @@ Choose an available simulator name on your Mac. Camera capture and the following
 - Permission allowed/denied and reenabled from Settings; no camera in simulator.
 - Built-in front/rear camera selection on iPhone and iPad.
 - UVC preview, unplug/reconnect, and unsupported camera behavior on the actual iPad.
-- Portrait/landscape preview, matching saved JPEG/video orientation, and an uninterrupted recording.
+- Both landscape directions and portrait device movement while Live View remains landscape; upright preview and matching JPEG/video orientation; an uninterrupted recording.
 - Silent/audio videos, microphone denial, backgrounding, low storage, and session interruption.
 - JPEG/MOV playback and sharing; selected Files folder after relaunch; disconnected provider leaves the local original intact.
+
+UI regression tests cover the four-button home screen and iPhone landscape-only Live View with fixed right-side controls, including Menu visibility. On iPadOS 26 and newer, the window manager may override landscape-only scene requests; that specific UI test is skipped there and iPad orientation requires separate physical-device validation. The controls retain their fixed right-side layout, but newer iPadOS may rotate the window. Camera leveling also requires physical-device validation.
