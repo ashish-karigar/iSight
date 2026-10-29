@@ -16,8 +16,8 @@ buildscript {
 
 // Define versions
 ext {
-    versionCompiler = 35
-    versionTarget = 35
+    versionCompiler = 36
+    versionTarget = 36
     versionBuildTool = "35.0.0"
     minSdkVersion = 21
     versionCode = 1
